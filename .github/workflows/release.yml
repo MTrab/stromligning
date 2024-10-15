@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+env:
+  COMPONENT_DIR: energidataservice
+
+jobs:
+  release_zip_file:
+    name: Prepare release asset
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Update manifest.json version to ${{ github.event.release.tag_name }}
+        run: |
+          python3 ${{ github.workspace }}/.github/scripts/update_hacs_manifest.py --version ${{ github.event.release.tag_name }} --path /custom_components/energidataservice/
+      - name: Commit manifest update
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add ./custom_components/energidataservice/manifest.json
+          git add ./custom_components/energidataservice/tariffs/energidataservice/chargeowners.py
+          git commit -m "Updated manifest.json and Charge Owners"
+          git push origin HEAD:master
+      - name: Create zip
+        run: |
+          cd custom_components/energidataservice
+          zip energidataservice.zip -r ./
+      - name: Upload zip to release
+        uses: svenstaro/upload-release-action@2.9.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./custom_components/energidataservice/energidataservice.zip
+          asset_name: energidataservice.zip
+          tag: ${{ github.ref }}
+          overwrite: true

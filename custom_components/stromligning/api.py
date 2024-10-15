@@ -1,0 +1,166 @@
+"""API connector for Stromligning."""
+
+import logging
+from datetime import datetime, timedelta, timezone
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_utils
+from pystromligning import Stromligning
+
+from .const import CONF_COMPANY, CONF_USE_VAT
+
+RETRY_MINUTES = 5
+MAX_RETRY_MINUTES = 60
+
+LOGGER = logging.getLogger(__name__)
+
+
+class StromligningAPI:
+    """An object to store Stromligning API date."""
+
+    def __init__(
+        self, hass: HomeAssistant, entry: ConfigEntry, rand_min: int, rand_sec: int
+    ) -> None:
+        """Initialize the Stromligning connector object."""
+        self.next_update = f"13:{rand_min}:{rand_sec}"
+
+        self._entry = entry
+
+        self.hass = hass
+
+        self.include_vat: bool = entry.data.get(CONF_USE_VAT)
+        self._data = Stromligning()
+
+        self.prices_today: list = []
+        self.prices_tomorrow: list = []
+
+        self.tomorrow_available: bool = False
+
+        self.listeners = []
+
+    async def set_location(self) -> None:
+        """Set the location."""
+        LOGGER.debug(
+            "Setting location to %s, %s",
+            self.hass.config.latitude,
+            self.hass.config.longitude,
+        )
+        await self.hass.async_add_executor_job(
+            self._data.set_location,
+            self.hass.config.latitude,
+            self.hass.config.longitude,
+        )
+
+        LOGGER.debug("Setting company to %s", self._entry.data.get(CONF_COMPANY))
+        self._data.set_company(self._entry.data.get(CONF_COMPANY))
+
+    async def update_prices(self) -> None:
+        """Update the price object."""
+        today_midnight_utc = (
+            dt_utils.as_utc(
+                dt_utils.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            )
+            .isoformat()
+            .replace("+00:00", ".000Z")
+        )
+        await self.hass.async_add_executor_job(self._data.update, today_midnight_utc)
+
+    async def prepare_data(self) -> None:
+        """Prepare the data for use in Home Assistant."""
+        LOGGER.debug("Preparing data")
+
+        today_midnight_utc = (
+            dt_utils.as_utc(
+                dt_utils.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            )
+            .isoformat()
+            .replace("+00:00", ".000Z")
+        )
+
+        tomorrow_midnight_utc = (
+            dt_utils.as_utc(
+                (dt_utils.now() + timedelta(days=1)).replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+            )
+            .isoformat()
+            .replace("+00:00", ".000Z")
+        )
+
+        self.prices_today = []
+        self.prices_tomorrow = []
+
+        for price in self._data.prices:
+            if (
+                price["date"] >= today_midnight_utc
+                and price["date"] < tomorrow_midnight_utc
+            ):
+                price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
+                self.prices_today.append(price)
+            elif price["date"] >= tomorrow_midnight_utc:
+                price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
+                self.prices_tomorrow.append(price)
+
+        LOGGER.debug("Found %s entries for tomorrow", len(self.prices_tomorrow))
+        if len(self.prices_tomorrow) == 24:
+            LOGGER.debug("Prices for tomorrow are valid")
+            self.tomorrow_available = True
+        else:
+            LOGGER.debug("Prices for tomorrow are NOT valid")
+            self.prices_tomorrow = []
+            self.tomorrow_available = False
+
+    def get_current(self) -> str:
+        """Get the current price"""
+        for price in self.prices_today:
+            if price["date"].hour == dt_utils.now().hour:
+                LOGGER.debug(
+                    "Returning '%s' as current price",
+                    (
+                        price["price"]["total"]
+                        if self.include_vat
+                        else price["price"]["value"]
+                    ),
+                )
+                return (
+                    price["price"]["total"]
+                    if self.include_vat
+                    else price["price"]["value"]
+                )
+
+    def get_spot(self) -> str:
+        """Get spotprice"""
+        for price in self.prices_today:
+            if price["date"].hour == dt_utils.now().hour:
+                LOGGER.debug(
+                    "Returning '%s' as current spotprice",
+                    (
+                        price["details"]["electricity"]["total"]
+                        if self.include_vat
+                        else price["details"]["electricity"]["value"]
+                    ),
+                )
+                return (
+                    price["details"]["electricity"]["total"]
+                    if self.include_vat
+                    else price["details"]["electricity"]["value"]
+                )
+
+    def get_electricitytax(self) -> str:
+        """Get electricity tax"""
+        for price in self.prices_today:
+            if price["date"].hour == dt_utils.now().hour:
+                LOGGER.debug(
+                    "Returning '%s' as current electricity tax",
+                    (
+                        price["details"]["electricityTax"]["total"]
+                        if self.include_vat
+                        else price["details"]["electricityTax"]["value"]
+                    ),
+                )
+                return (
+                    price["details"]["electricityTax"]["total"]
+                    if self.include_vat
+                    else price["details"]["electricityTax"]["value"]
+                )

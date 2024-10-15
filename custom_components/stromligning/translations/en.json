@@ -1,0 +1,54 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Integration with same name already existing"
+        },
+        "error": {
+            "invalid_auth": "Invalid authentication"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "name": "Name for this integration",
+                    "vat": "Show prices including VAT"
+                }
+            }
+        },
+        "title": "Strømligning"
+    },
+    "entity": {
+        "sensor": {
+            "current_price": {
+                "name": "Total",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Prices today"
+                    }
+                }
+            },
+            "spotprice": {
+                "name": "Spotprice"
+            },
+            "electricity_tax": {
+                "name": "Electricity tax"
+            }
+        },
+        "binary_sensor": {
+            "tomorrow_available": {
+                "name": "Prices for tomorrow",
+                "state": {
+                    "on": "Available",
+                    "off": "Not available yet"
+                },
+                "state_attributes": {
+                    "available_at": {
+                        "name": "Available at"
+                    },
+                    "prices": {
+                        "name": "Prices tomorrow"
+                    }
+                }
+            }
+        }
+    }
+}
