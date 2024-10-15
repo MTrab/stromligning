@@ -39,7 +39,7 @@ SENSORS = [
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
-        icon="mdi:flash",
+        icon="mdi:transmission-tower-import",
         value_fn=lambda stromligning: stromligning.get_spot(),
         suggested_display_precision=2,
         translation_key="spotprice",
@@ -49,7 +49,7 @@ SENSORS = [
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
-        icon="mdi:flash",
+        icon="mdi:currency-eur",
         value_fn=lambda stromligning: stromligning.get_electricitytax(),
         suggested_display_precision=2,
         translation_key="electricity_tax",
@@ -62,8 +62,6 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_devices):
     sensors = []
 
     for sensor in SENSORS:
-        # if sensor.name is None:
-        #     sensor.name = entry.data.get(CONF_NAME)
         entity = StromligningSensor(sensor, hass, entry)
         LOGGER.debug(
             "Added sensor with entity_id '%s'",

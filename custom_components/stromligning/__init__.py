@@ -73,7 +73,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_forward_entry_unload(entry, PLATFORMS)
+    for platform in PLATFORMS:
+        unload_ok = await hass.config_entries.async_forward_entry_unload(
+            entry, platform
+        )
 
     if unload_ok:
         for unsub in hass.data[DOMAIN][entry.entry_id].listeners:

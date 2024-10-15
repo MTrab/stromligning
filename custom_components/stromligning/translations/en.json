@@ -10,7 +10,26 @@
             "user": {
                 "data": {
                     "name": "Name for this integration",
-                    "vat": "Show prices including VAT"
+                    "vat": "Show prices including VAT",
+                    "company": "Electricity provider"
+                }
+            }
+        },
+        "title": "Strømligning"
+    },
+    "options": {
+        "abort": {
+            "already_configured": "Integration with same name already existing"
+        },
+        "error": {
+            "invalid_auth": "Invalid authentication"
+        },
+        "step": {
+            "init": {
+                "data": {
+                    "name": "Name for this integration",
+                    "vat": "Show prices including VAT",
+                    "company": "Electricity provider"
                 }
             }
         },

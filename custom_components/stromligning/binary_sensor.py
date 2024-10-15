@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components import sensor
+from homeassistant.components import binary_sensor
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -27,7 +27,7 @@ BINARY_SENSORS = [
         key="tomorrow_available",
         entity_category=None,
         device_class=None,
-        icon="mdi:flash",
+        icon="mdi:calendar-end",
         value_fn=lambda stromligning: stromligning.tomorrow_available,
         translation_key="tomorrow_available",
     )
@@ -86,7 +86,7 @@ class StromligningBinarySensor(BinarySensorEntity):
             self.handle_update,
         )
 
-        self.entity_id = sensor.ENTITY_ID_FORMAT.format(
+        self.entity_id = binary_sensor.ENTITY_ID_FORMAT.format(
             util_slugify(
                 f"{self._config.data.get(CONF_NAME)}_{self.entity_description.key}"
             )

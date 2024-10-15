@@ -29,7 +29,7 @@ class StromligningAPI:
 
         self.hass = hass
 
-        self.include_vat: bool = entry.data.get(CONF_USE_VAT)
+        self.include_vat: bool = entry.options.get(CONF_USE_VAT)
         self._data = Stromligning()
 
         self.prices_today: list = []
@@ -52,8 +52,13 @@ class StromligningAPI:
             self.hass.config.longitude,
         )
 
-        LOGGER.debug("Setting company to %s", self._entry.data.get(CONF_COMPANY))
-        self._data.set_company(self._entry.data.get(CONF_COMPANY))
+        LOGGER.debug(
+            "Setting company to %s",
+            self._entry.options.get(CONF_COMPANY) ,
+        )
+        self._data.set_company(
+            self._entry.options.get(CONF_COMPANY)
+        )
 
     async def update_prices(self) -> None:
         """Update the price object."""

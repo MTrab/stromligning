@@ -10,7 +10,26 @@
             "user": {
                 "data": {
                     "name": "Navn til integrationen",
-                    "vat": "Vis priserne med moms"
+                    "vat": "Vis priserne med moms",
+                    "company": "El leverandør"
+                }
+            }
+        },
+        "title": "Strømligning"
+    },
+    "options": {
+        "abort": {
+            "already_configured": "Integration med samme navn eksisterer allerede"
+        },
+        "error": {
+            "invalid_auth": "Invalid authentication"
+        },
+        "step": {
+            "init": {
+                "data": {
+                    "name": "Navn til integrationen",
+                    "vat": "Vis priserne med moms",
+                    "company": "El leverandør"
                 }
             }
         },
