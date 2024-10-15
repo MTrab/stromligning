@@ -1,7 +1,7 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Integration with same name already existing"
+            "already_configured": "Integration med samme navn eksisterer allerede"
         },
         "error": {
             "invalid_auth": "Invalid authentication"
@@ -9,8 +9,8 @@
         "step": {
             "user": {
                 "data": {
-                    "name": "Name for this integration",
-                    "vat": "Show prices including VAT"
+                    "name": "Navn til integrationen",
+                    "vat": "Vis priserne med moms"
                 }
             }
         },
@@ -19,33 +19,33 @@
     "entity": {
         "sensor": {
             "current_price": {
-                "name": "Current",
+                "name": "Aktuel",
                 "state_attributes": {
                     "prices": {
-                        "name": "Prices today"
+                        "name": "Priser i dag"
                     }
                 }
             },
             "spotprice": {
-                "name": "Spotprice"
+                "name": "Spotpris"
             },
             "electricity_tax": {
-                "name": "Electricity tax"
+                "name": "Elafgift"
             }
         },
         "binary_sensor": {
             "tomorrow_available": {
-                "name": "Prices for tomorrow",
+                "name": "Priser for i morgen",
                 "state": {
-                    "on": "Available",
-                    "off": "Not available yet"
+                    "on": "Klar",
+                    "off": "Endnu ikke klar"
                 },
                 "state_attributes": {
                     "available_at": {
-                        "name": "Available at"
+                        "name": "Forventes klar"
                     },
                     "prices": {
-                        "name": "Prices tomorrow"
+                        "name": "Priser for i morgen"
                     }
                 }
             }
