@@ -4,14 +4,15 @@
             "already_configured": "Integration with same name already existing"
         },
         "error": {
-            "invalid_auth": "Invalid authentication"
+            "too_many_requests": "Too many requests to the API - try again in 15 minutes"
         },
         "step": {
             "user": {
                 "data": {
                     "name": "Name for this integration",
                     "vat": "Show prices including VAT",
-                    "company": "Electricity provider"
+                    "company": "Electricity provider",
+                    "extra_cost_template": "Template for additional costs"
                 }
             }
         },
@@ -22,14 +23,15 @@
             "already_configured": "Integration with same name already existing"
         },
         "error": {
-            "invalid_auth": "Invalid authentication"
+            "too_many_requests": "Too many requests to the API - try again in 15 minutes"
         },
         "step": {
             "init": {
                 "data": {
                     "name": "Name for this integration",
                     "vat": "Show prices including VAT",
-                    "company": "Electricity provider"
+                    "company": "Electricity provider",
+                    "extra_cost_template": "Template for additional costs"
                 }
             }
         },

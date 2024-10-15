@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+import homeassistant.helpers.config_validation as cv
 from homeassistant.components import sensor
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -14,12 +15,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.template import Template
+from homeassistant.util import dt as dt_utils
 from homeassistant.util import slugify as util_slugify
+from jinja2 import pass_context
 from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
 from .base import StromligningSensorEntityDescription
-from .const import DOMAIN, UPDATE_SIGNAL
+from .const import CONF_TEMPLATE, DEFAULT_TEMPLATE, DOMAIN, UPDATE_SIGNAL
 
 LOGGER = logging.getLogger(__name__)
 
@@ -91,6 +95,7 @@ class StromligningSensor(SensorEntity):
         self._config = entry
         self._hass = hass
         self.api: StromligningAPI = hass.data[DOMAIN][entry.entry_id]
+        self._cost_template = entry.options.get(CONF_TEMPLATE)
 
         self._attr_unique_id = util_slugify(
             f"{self.entity_description.key}_{self._config.entry_id}"
@@ -117,6 +122,14 @@ class StromligningSensor(SensorEntity):
             )
         )
 
+        if not isinstance(self._cost_template, Template):
+            if self._cost_template in (None, ""):
+                self._cost_template = DEFAULT_TEMPLATE
+            self._cost_template = cv.template(self._cost_template)
+        else:
+            if self._cost_template.template in ("", None):
+                self._cost_template = cv.template(DEFAULT_TEMPLATE)
+
     async def handle_attributes(self) -> None:
         """Handle attributes."""
         if self.entity_description.key == "current_price":
@@ -141,6 +154,22 @@ class StromligningSensor(SensorEntity):
             self._attr_native_value = self.entity_description.value_fn(
                 self._hass.data[DOMAIN][self._config.entry_id]
             )
+
+            template_value = self._cost_template.async_render()
+
+            if not isinstance(template_value, int | float):
+                try:
+                    template_value = float(template_value)
+                except (TypeError, ValueError):
+                    LOGGER.exception(
+                        "Failed to convert %s %s to float",
+                        template_value,
+                        type(template_value),
+                    )
+                    raise
+
+            self._attr_native_value += template_value
+
             LOGGER.debug("Setting value to: %s", self._attr_native_value)
             await self.handle_attributes()
             self._attr_available = True

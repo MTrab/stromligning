@@ -12,12 +12,14 @@ https://github.com/mtrab/stromligning/issues
 -------------------------------------------------------------------
 """
 
+CONF_COMPANY = "company"
+CONF_DEFAULT_NAME = "Strømligning"
+CONF_TEMPLATE = "extra_cost_template"
+CONF_USE_VAT = "vat"
+
+DEFAULT_TEMPLATE = "{{0.0|float(0)}}"
 DOMAIN = "stromligning"
 
 PLATFORMS = ["sensor", "binary_sensor"]
-
-CONF_USE_VAT = "vat"
-CONF_COMPANY = "company"
-CONF_DEFAULT_NAME = "Strømligning"
 
 UPDATE_SIGNAL = f"{DOMAIN}_SIGNAL_UPDATE"

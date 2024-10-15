@@ -44,6 +44,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Handle data on new day."""
         LOGGER.debug("New day function called")
 
+        await api.prepare_data()
+
         async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
 
     async def new_hour(n):  # type: ignore pylint: disable=unused-argument, invalid-name

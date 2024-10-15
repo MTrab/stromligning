@@ -12,7 +12,7 @@ from pystromligning import Stromligning
 from pystromligning.exceptions import TooManyRequests
 
 from . import async_setup_entry, async_unload_entry
-from .const import CONF_COMPANY, CONF_DEFAULT_NAME, CONF_USE_VAT, DOMAIN
+from .const import CONF_COMPANY, CONF_DEFAULT_NAME, CONF_TEMPLATE, CONF_USE_VAT, DOMAIN
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,20 +36,10 @@ class StromligningOptionsFlow(config_entries.OptionsFlow):
         """Handle the initial options flow step."""
         errors = {}
 
-        # try:
-        #     api = Stromligning()
-        #     await self.hass.async_add_executor_job(
-        #         api.set_location, self.hass.config.latitude, self.hass.config.longitude
-        #     )
-        # except TooManyRequests:
-        #     errors["base"] = "too_many_requests"
-
         api = self.hass.data[DOMAIN][self.config_entry.entry_id]._data
 
         if user_input is not None and "base" not in errors:
-            LOGGER.debug("Updating settings")
-            # await self.async_set_unique_id(f"{user_input[CONF_NAME]}_stromligning")
-
+            LOGGER.debug("Saving settings")
             for company in api.available_companies:
                 if company["name"] == user_input[CONF_COMPANY]:
                     user_input[CONF_COMPANY] = company["id"]
@@ -84,6 +74,7 @@ class StromligningOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_COMPANY, default=selected_company): vol.In(
                     company_list
                 ),
+                vol.Optional(CONF_TEMPLATE): str,
             }
         )
 
@@ -108,12 +99,15 @@ class StromligningConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial config flow step."""
         errors = {}
 
-        api = Stromligning()
-        await self.hass.async_add_executor_job(
-            api.set_location, self.hass.config.latitude, self.hass.config.longitude
-        )
+        try:
+            api = Stromligning()
+            await self.hass.async_add_executor_job(
+                api.set_location, self.hass.config.latitude, self.hass.config.longitude
+            )
+        except TooManyRequests:
+            errors["base"] = "too_many_requests"
 
-        if user_input is not None:
+        if user_input is not None and "base" not in errors:
             await self.async_set_unique_id(f"{user_input[CONF_NAME]}_stromligning")
 
             for company in api.available_companies:
@@ -141,6 +135,7 @@ class StromligningConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_NAME, default=CONF_DEFAULT_NAME): str,
                 vol.Required(CONF_USE_VAT, default=True): bool,
                 vol.Required(CONF_COMPANY): vol.In(company_list),
+                vol.Optional(CONF_TEMPLATE): str,
             }
         )
 
