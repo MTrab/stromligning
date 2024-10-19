@@ -1,4 +1,6 @@
-![Current Release](https://img.shields.io/github/release/mtrab/stromligning/all.svg?style=plastic)![Github All Releases](https://img.shields.io/github/downloads/mtrab/stromligning/total.svg?style=plastic)![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=plastic)
+![Current Release](https://img.shields.io/github/release/mtrab/stromligning/all.svg?style=plastic)
+![Github All Releases](https://img.shields.io/github/downloads/mtrab/stromligning/total.svg?style=plastic)
+<!--![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=plastic)-->
 
 ![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)
 
@@ -15,11 +17,11 @@ The integration automatically recognises tariff settings from the Home Assistant
 
 ## Installation:
 
-### Option 1 (easy) - HACS:
+### ~~Option 1 (easy) - HACS:~~
 
-*   Ensure that HACS is installed.
-*   Search for and install the "Stromligning" integration.
-*   Restart Home Assistant.
+*   ~~Ensure that HACS is installed.~~
+*   ~~Search for and install the "Stromligning" integration.~~
+*   ~~Restart Home Assistant.~~
 
 ### Option 2 - Manual installation:
 
@@ -31,7 +33,7 @@ The integration automatically recognises tariff settings from the Home Assistant
 
 My Home Assistant shortcut:
 
-![](https://my.home-assistant.io/badges/config_flow_start.svg)
+[![](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=stromligning)
 
 Or go to Home Assistant > Settings > Integrations
 
