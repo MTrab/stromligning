@@ -6,7 +6,7 @@ on:
     types: [published]
 
 env:
-  COMPONENT_DIR: energidataservice
+  COMPONENT_DIR: stromligning
 
 jobs:
   release_zip_file:
@@ -17,24 +17,23 @@ jobs:
         uses: actions/checkout@v4
       - name: Update manifest.json version to ${{ github.event.release.tag_name }}
         run: |
-          python3 ${{ github.workspace }}/.github/scripts/update_hacs_manifest.py --version ${{ github.event.release.tag_name }} --path /custom_components/energidataservice/
+          python3 ${{ github.workspace }}/.github/scripts/update_hacs_manifest.py --version ${{ github.event.release.tag_name }} --path /custom_components/stromligning/
       - name: Commit manifest update
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add ./custom_components/energidataservice/manifest.json
-          git add ./custom_components/energidataservice/tariffs/energidataservice/chargeowners.py
-          git commit -m "Updated manifest.json and Charge Owners"
+          git add ./custom_components/stromligning/manifest.json
+          git commit -m "Updated manifest.json"
           git push origin HEAD:master
       - name: Create zip
         run: |
-          cd custom_components/energidataservice
-          zip energidataservice.zip -r ./
+          cd custom_components/stromligning
+          zip stromligning.zip -r ./
       - name: Upload zip to release
         uses: svenstaro/upload-release-action@2.9.0
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./custom_components/energidataservice/energidataservice.zip
-          asset_name: energidataservice.zip
+          file: ./custom_components/stromligning/stromligning.zip
+          asset_name: stromligning.zip
           tag: ${{ github.ref }}
           overwrite: true

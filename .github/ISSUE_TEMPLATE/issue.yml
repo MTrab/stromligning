@@ -1,5 +1,5 @@
 name: Report a bug / issue
-description: Report an issue with the Energi Data Service integration
+description: Report an issue with the Strømligning integration
 labels: ["bug"]
 assignees:
   - MTrab
@@ -70,7 +70,7 @@ body:
         and <ins>drag-and-drop that file into the textbox below.</ins>**
 
         It generally allows pinpointing defects and thus resolving issues faster.
-        
+
         If you are unable to provide the diagnostics (ie. you cannot add the integration), please write **None** in this field.
   - type: textarea
     attributes:

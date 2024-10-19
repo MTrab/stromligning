@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Energi Data Service from a config entry."""
+    """Set up Strømligning from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     integration = await async_get_integration(hass, DOMAIN)
     LOGGER.info(STARTUP, integration.version)

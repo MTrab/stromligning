@@ -1,4 +1,4 @@
-![Current Release](https://img.shields.io/github/release/mtrab/energidataservice/all.svg?style=plastic)![Github All Releases](https://img.shields.io/github/downloads/mtrab/energidataservice/total.svg?style=plastic)![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=plastic)
+![Current Release](https://img.shields.io/github/release/mtrab/stromligning/all.svg?style=plastic)![Github All Releases](https://img.shields.io/github/downloads/mtrab/stromligning/total.svg?style=plastic)![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=plastic)
 
 ![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)
 
@@ -8,9 +8,9 @@ The integration automatically recognises tariff settings from the Home Assistant
 
 ## Table of Content
 
-[**Installation**](#installation)  
-  
-[**Setup**](#setup)  
+[**Installation**](#installation)
+
+[**Setup**](#setup)
  
 
 ## Installation:
@@ -29,8 +29,8 @@ The integration automatically recognises tariff settings from the Home Assistant
 
 ## Setup
 
-My Home Assistant shortcut:  
-  
+My Home Assistant shortcut:
+
 ![](https://my.home-assistant.io/badges/config_flow_start.svg)
 
 Or go to Home Assistant > Settings > Integrations
