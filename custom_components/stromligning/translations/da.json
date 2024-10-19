@@ -34,8 +34,7 @@
                     "extra_cost_template": "Skabelon til ekstra omkostninger"
                 }
             }
-        },
-        "title": "Strømligning"
+        }
     },
     "entity": {
         "sensor": {

@@ -34,8 +34,7 @@
                     "extra_cost_template": "Template for additional costs"
                 }
             }
-        },
-        "title": "Strømligning"
+        }
     },
     "entity": {
         "sensor": {
