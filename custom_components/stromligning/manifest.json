@@ -1,6 +1,6 @@
 {
     "domain": "stromligning",
-    "name": "Strømligning",
+    "name": "Str\u00f8mligning",
     "after_dependencies": [
         "http"
     ],
@@ -14,5 +14,5 @@
     "requirements": [
         "pystromligning==0.1.1"
     ],
-    "version": "0.0.1b1"
+    "version": "--path"
 }
