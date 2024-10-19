@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import logging
 
 from homeassistant.components import binary_sensor
@@ -96,18 +97,19 @@ class StromligningBinarySensor(BinarySensorEntity):
         """Handle attributes."""
         if self.entity_description.key == "tomorrow_available":
             self._attr_extra_state_attributes = {}
-            if self._attr_is_on:
-                price_set: list = []
-                for price in self.api.prices_tomorrow:
-                    price_set.append(
-                        {
-                            price["date"].strftime("%H:%M:%S"): (
-                                price["price"]["total"]
-                                if self.api.include_vat
-                                else price["price"]["value"]
-                            )
-                        }
-                    )
+            price_set: list = []
+            for price in self.api.prices_today:
+                price_set.append(
+                    {
+                        "start": price["date"],
+                        "end": price["date"] + timedelta(hours=1),
+                        "price": (
+                            price["price"]["total"]
+                            if self.api.include_vat
+                            else price["price"]["value"]
+                        ),
+                    }
+                )
 
                 self._attr_extra_state_attributes.update({"prices": price_set})
             else:
