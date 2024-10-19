@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import logging
 
 import homeassistant.helpers.config_validation as cv
@@ -138,11 +139,13 @@ class StromligningSensor(SensorEntity):
             for price in self.api.prices_today:
                 price_set.append(
                     {
-                        price["date"].strftime("%H:%M:%S"): (
+                        "start": price["date"],
+                        "end": price["date"] + timedelta(hours=1),
+                        "price": (
                             price["price"]["total"]
                             if self.api.include_vat
                             else price["price"]["value"]
-                        )
+                        ),
                     }
                 )
 
