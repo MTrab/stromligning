@@ -98,7 +98,7 @@ class StromligningBinarySensor(BinarySensorEntity):
         if self.entity_description.key == "tomorrow_available":
             self._attr_extra_state_attributes = {}
             price_set: list = []
-            for price in self.api.prices_today:
+            for price in self.api.prices_tomorrow:
                 price_set.append(
                     {
                         "start": price["date"],
