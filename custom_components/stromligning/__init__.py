@@ -64,8 +64,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     update_new_hour = async_track_time_change(hass, new_hour, minute=0, second=1)
+    update_new_day = async_track_time_change(hass, new_day, hour=0, minute=0, second=1)
 
     api.listeners.append(update_new_hour)
+    api.listeners.append(update_new_day)
     api.listeners.append(update_tomorrow)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
