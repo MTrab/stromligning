@@ -50,6 +50,25 @@
             },
             "electricity_tax": {
                 "name": "Elafgift"
+            },
+            "today_min": {
+                "name": "Minimum pris resten af dagen",
+                "state_attributes": {
+                    "at": {
+                        "name": "Tidspunkt"
+                    }
+                }
+            },
+            "today_max": {
+                "name": "Maximum pris resten af dagen",
+                "state_attributes": {
+                    "at": {
+                        "name": "Tidspunkt"
+                    }
+                }
+            },
+            "today_mean": {
+                "name": "Gennemsnits pris resten af dagen"
             }
         },
         "binary_sensor": {

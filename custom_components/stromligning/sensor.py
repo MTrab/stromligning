@@ -59,6 +59,36 @@ SENSORS = [
         suggested_display_precision=2,
         translation_key="electricity_tax",
     ),
+    StromligningSensorEntityDescription(
+        key="today_min",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_today("min"),
+        suggested_display_precision=2,
+        translation_key="today_min",
+    ),
+    StromligningSensorEntityDescription(
+        key="today_max",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_today("max"),
+        suggested_display_precision=2,
+        translation_key="today_max",
+    ),
+    StromligningSensorEntityDescription(
+        key="today_mean",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_today("mean"),
+        suggested_display_precision=2,
+        translation_key="today_mean",
+    ),
 ]
 
 
@@ -150,6 +180,16 @@ class StromligningSensor(SensorEntity):
                 )
 
             self._attr_extra_state_attributes.update({"prices": price_set})
+        elif self.entity_description.key == "today_min":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"at": self.api.get_specific_today("min", date=True)}
+            )
+        elif self.entity_description.key == "today_max":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"at": self.api.get_specific_today("max", date=True)}
+            )
 
     async def handle_update(self) -> None:
         """Handle data update."""
