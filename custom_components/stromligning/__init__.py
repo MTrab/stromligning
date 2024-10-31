@@ -44,7 +44,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Handle data on new day."""
         LOGGER.debug("New day function called")
 
-        await api.prepare_data()
+        if len(api.prices_tomorrow) > 0:
+            api.prices_today = api.prices_tomorrow
+            api.prices_tomorrow = []
+            api.tomorrow_available = False
+        else:
+            await api.update_prices()
+            await api.prepare_data()
 
         async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
 
