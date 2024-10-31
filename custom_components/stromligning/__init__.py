@@ -47,6 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if len(api.prices_tomorrow) > 0:
             api.prices_today = api.prices_tomorrow
             api.prices_tomorrow = []
+            api.tomorrow_available = False
         else:
             await api.update_prices()
             await api.prepare_data()
