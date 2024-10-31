@@ -213,7 +213,11 @@ class StromligningSensor(SensorEntity):
 
             self._attr_native_value += template_value
 
-            LOGGER.debug("Setting value to: %s", self._attr_native_value)
+            LOGGER.debug(
+                "Setting value for '%s' to: %s",
+                self.entity_id,
+                self._attr_native_value,
+            )
             await self.handle_attributes()
             self._attr_available = True
         except TooManyRequests:

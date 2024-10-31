@@ -123,7 +123,11 @@ class StromligningBinarySensor(BinarySensorEntity):
             self._attr_is_on = self.entity_description.value_fn(
                 self._hass.data[DOMAIN][self._config.entry_id]
             )
-            LOGGER.debug("Setting value to: %s", self._attr_is_on)
+            LOGGER.debug(
+                "Setting value for '%s' to: %s",
+                self.entity_id,
+                self._attr_is_on,
+            )
             await self.handle_attributes()
             self._attr_available = True
         except TooManyRequests:
