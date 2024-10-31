@@ -54,11 +54,9 @@ class StromligningAPI:
 
         LOGGER.debug(
             "Setting company to %s",
-            self._entry.options.get(CONF_COMPANY) ,
+            self._entry.options.get(CONF_COMPANY),
         )
-        self._data.set_company(
-            self._entry.options.get(CONF_COMPANY)
-        )
+        self._data.set_company(self._entry.options.get(CONF_COMPANY))
 
     async def update_prices(self) -> None:
         """Update the price object."""
@@ -169,3 +167,42 @@ class StromligningAPI:
                     if self.include_vat
                     else price["details"]["electricityTax"]["value"]
                 )
+
+    def mean(self, data: list) -> float:
+        """Calculate mean value of list."""
+        val = 0
+        num = 0
+
+        for i in data:
+            val += i["price"]["total"] if self.include_vat else i["price"]["value"]
+            num += 1
+
+        return val / num
+
+    def get_specific_today(
+        self, type: str, full_day: bool = False, date: bool = False
+    ) -> str | datetime:
+        """Get today specific price and time."""
+        if not full_day:
+            dataset: list = []
+            for price in self.prices_today:
+                if price["date"] >= dt_utils.now():
+                    dataset.append(price)
+        else:
+            dataset = self.prices_today
+
+        if type.lower() == "min":
+            res = min(dataset, key=lambda k: k["price"]["value"])
+        elif type.lower() == "max":
+            res = max(dataset, key=lambda k: k["price"]["value"])
+        elif type.lower() == "mean":
+            return self.mean(dataset)
+
+        ret = {
+            "date": res["date"].strftime("%H:%M:%S"),
+            "price": (
+                res["price"]["total"] if self.include_vat else res["price"]["value"]
+            ),
+        }
+
+        return ret["date"] if date else ret["price"]

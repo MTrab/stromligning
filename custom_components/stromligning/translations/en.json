@@ -50,6 +50,30 @@
             },
             "electricity_tax": {
                 "name": "Electricity tax"
+            },
+            "today_min": {
+                "name": "Minimum price rest of the day",
+                "state_attributes": {
+                    "at": {
+                        "name": "At"
+                    }
+                }
+            },
+            "today_max": {
+                "name": "Maximum price rest of the day",
+                "state_attributes": {
+                    "at": {
+                        "name": "At"
+                    }
+                }
+            },
+            "today_mean": {
+                "name": "Mean price rest of the day",
+                "state_attributes": {
+                    "at": {
+                        "name": "At"
+                    }
+                }
             }
         },
         "binary_sensor": {
