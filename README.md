@@ -8,9 +8,6 @@ Stromligning for Home Assistant integrates Day Ahead spotprices for electricity,
 
 The integration automatically recognises tariff settings from the Home Assistant home location coordinates and allows you to select your electricity vendor.
 
-## Known limitations/bugs
-* Additional templates are currently not working, even though it's possible to insert, it is __NOT__ taken into account in the final price
-
 ## Table of Content
 
 [**Installation**](#installation)

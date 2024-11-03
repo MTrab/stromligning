@@ -30,64 +30,136 @@ LOGGER = logging.getLogger(__name__)
 
 SENSORS = [
     StromligningSensorEntityDescription(
-        key="current_price",
+        key="current_price_vat",
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
         icon="mdi:flash",
-        value_fn=lambda stromligning: stromligning.get_current(),
+        value_fn=lambda stromligning: stromligning.get_current(True),
         suggested_display_precision=2,
-        translation_key="current_price",
+        entity_registry_enabled_default=True,
+        translation_key="current_price_vat",
     ),
     StromligningSensorEntityDescription(
-        key="spotprice",
+        key="current_price_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_current(False),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="current_price_ex_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="spotprice_vat",
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
         icon="mdi:transmission-tower-import",
-        value_fn=lambda stromligning: stromligning.get_spot(),
+        value_fn=lambda stromligning: stromligning.get_spot(True),
         suggested_display_precision=2,
-        translation_key="spotprice",
+        entity_registry_enabled_default=True,
+        translation_key="spotprice_vat",
     ),
     StromligningSensorEntityDescription(
-        key="electricity_tax",
+        key="spotprice_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:transmission-tower-import",
+        value_fn=lambda stromligning: stromligning.get_spot(False),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="spotprice_ex_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="electricity_tax_vat",
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
         icon="mdi:currency-eur",
-        value_fn=lambda stromligning: stromligning.get_electricitytax(),
+        value_fn=lambda stromligning: stromligning.get_electricitytax(True),
         suggested_display_precision=2,
-        translation_key="electricity_tax",
+        entity_registry_enabled_default=True,
+        translation_key="electricity_tax_vat",
     ),
     StromligningSensorEntityDescription(
-        key="today_min",
+        key="electricity_tax_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:currency-eur",
+        value_fn=lambda stromligning: stromligning.get_electricitytax(False),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="electricity_tax_ex_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="today_min_vat",
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
         icon="mdi:flash",
-        value_fn=lambda stromligning: stromligning.get_specific_today("min"),
+        value_fn=lambda stromligning: stromligning.get_specific_today("min", True),
         suggested_display_precision=2,
-        translation_key="today_min",
+        entity_registry_enabled_default=True,
+        translation_key="today_min_vat",
     ),
     StromligningSensorEntityDescription(
-        key="today_max",
+        key="today_min_ex_vat",
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
         icon="mdi:flash",
-        value_fn=lambda stromligning: stromligning.get_specific_today("max"),
+        value_fn=lambda stromligning: stromligning.get_specific_today("min", False),
         suggested_display_precision=2,
-        translation_key="today_max",
+        entity_registry_enabled_default=False,
+        translation_key="today_min_ex_vat",
     ),
     StromligningSensorEntityDescription(
-        key="today_mean",
+        key="today_max_vat",
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
         icon="mdi:flash",
-        value_fn=lambda stromligning: stromligning.get_specific_today("mean"),
+        value_fn=lambda stromligning: stromligning.get_specific_today("max", True),
         suggested_display_precision=2,
-        translation_key="today_mean",
+        entity_registry_enabled_default=True,
+        translation_key="today_max_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="today_max_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_today("max", False),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="today_max_ex_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="today_mean_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_today("mean", True),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=True,
+        translation_key="today_mean_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="today_mean_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_today("mean", False),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="today_mean_ex_vat",
     ),
 ]
 
@@ -163,7 +235,7 @@ class StromligningSensor(SensorEntity):
 
     async def handle_attributes(self) -> None:
         """Handle attributes."""
-        if self.entity_description.key == "current_price":
+        if self.entity_description.key == "current_price_vat":
             self._attr_extra_state_attributes = {}
             price_set: list = []
             for price in self.api.prices_today:
@@ -171,24 +243,43 @@ class StromligningSensor(SensorEntity):
                     {
                         "start": price["date"],
                         "end": price["date"] + timedelta(hours=1),
-                        "price": (
-                            price["price"]["total"]
-                            if self.api.include_vat
-                            else price["price"]["value"]
-                        ),
+                        "price": price["price"]["total"],
                     }
                 )
 
             self._attr_extra_state_attributes.update({"prices": price_set})
-        elif self.entity_description.key == "today_min":
+        if self.entity_description.key == "current_price_ex_vat":
+            self._attr_extra_state_attributes = {}
+            price_set: list = []
+            for price in self.api.prices_today:
+                price_set.append(
+                    {
+                        "start": price["date"],
+                        "end": price["date"] + timedelta(hours=1),
+                        "price": price["price"]["value"],
+                    }
+                )
+
+            self._attr_extra_state_attributes.update({"prices": price_set})
+        elif self.entity_description.key == "today_min_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
-                {"at": self.api.get_specific_today("min", date=True)}
+                {"at": self.api.get_specific_today("min", date=True, vat=True)}
             )
-        elif self.entity_description.key == "today_max":
+        elif self.entity_description.key == "today_min_ex_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
-                {"at": self.api.get_specific_today("max", date=True)}
+                {"at": self.api.get_specific_today("min", date=True, vat=False)}
+            )
+        elif self.entity_description.key == "today_max_vat":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"at": self.api.get_specific_today("max", date=True, vat=True)}
+            )
+        elif self.entity_description.key == "today_max_ex_vat":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"at": self.api.get_specific_today("max", date=True, vat=False)}
             )
 
     async def handle_update(self) -> None:

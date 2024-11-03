@@ -25,13 +25,23 @@ LOGGER = logging.getLogger(__name__)
 
 BINARY_SENSORS = [
     StromligningBinarySensorEntityDescription(
-        key="tomorrow_available",
+        key="tomorrow_available_vat",
         entity_category=None,
         device_class=None,
         icon="mdi:calendar-end",
         value_fn=lambda stromligning: stromligning.tomorrow_available,
-        translation_key="tomorrow_available",
-    )
+        entity_registry_enabled_default=True,
+        translation_key="tomorrow_available_vat",
+    ),
+    StromligningBinarySensorEntityDescription(
+        key="tomorrow_available_ex_vat",
+        entity_category=None,
+        device_class=None,
+        icon="mdi:calendar-end",
+        value_fn=lambda stromligning: stromligning.tomorrow_available,
+        entity_registry_enabled_default=False,
+        translation_key="tomorrow_available_ex_vat",
+    ),
 ]
 
 
@@ -95,7 +105,7 @@ class StromligningBinarySensor(BinarySensorEntity):
 
     async def handle_attributes(self) -> None:
         """Handle attributes."""
-        if self.entity_description.key == "tomorrow_available":
+        if self.entity_description.key == "tomorrow_available_vat":
             self._attr_extra_state_attributes = {}
             price_set: list = []
             for price in self.api.prices_tomorrow:
@@ -103,11 +113,24 @@ class StromligningBinarySensor(BinarySensorEntity):
                     {
                         "start": price["date"],
                         "end": price["date"] + timedelta(hours=1),
-                        "price": (
-                            price["price"]["total"]
-                            if self.api.include_vat
-                            else price["price"]["value"]
-                        ),
+                        "price": price["price"]["total"],
+                    }
+                )
+
+                self._attr_extra_state_attributes.update({"prices": price_set})
+            else:
+                self._attr_extra_state_attributes.update(
+                    {"available_at": self.api.next_update}
+                )
+        elif self.entity_description.key == "tomorrow_available_ex_vat":
+            self._attr_extra_state_attributes = {}
+            price_set: list = []
+            for price in self.api.prices_tomorrow:
+                price_set.append(
+                    {
+                        "start": price["date"],
+                        "end": price["date"] + timedelta(hours=1),
+                        "price": price["price"]["value"],
                     }
                 )
 
