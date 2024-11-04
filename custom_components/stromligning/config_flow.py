@@ -67,14 +67,9 @@ class StromligningOptionsFlow(config_entries.OptionsFlow):
 
         scheme = vol.Schema(
             {
-                vol.Required(
-                    CONF_USE_VAT,
-                    default=self.config_entry.options[CONF_USE_VAT],
-                ): bool,
                 vol.Required(CONF_COMPANY, default=selected_company): vol.In(
                     company_list
                 ),
-                vol.Optional(CONF_TEMPLATE): str,
             }
         )
 
@@ -133,9 +128,7 @@ class StromligningConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         scheme = vol.Schema(
             {
                 vol.Required(CONF_NAME, default=CONF_DEFAULT_NAME): str,
-                vol.Required(CONF_USE_VAT, default=True): bool,
                 vol.Required(CONF_COMPANY): vol.In(company_list),
-                vol.Optional(CONF_TEMPLATE): str,
             }
         )
 

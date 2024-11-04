@@ -29,7 +29,6 @@ class StromligningAPI:
 
         self.hass = hass
 
-        self.include_vat: bool = entry.options.get(CONF_USE_VAT)
         self._data = Stromligning()
 
         self.prices_today: list = []
@@ -114,25 +113,17 @@ class StromligningAPI:
             self.prices_tomorrow = []
             self.tomorrow_available = False
 
-    def get_current(self) -> str:
+    def get_current(self, vat: bool = True) -> str:
         """Get the current price"""
         for price in self.prices_today:
             if price["date"].hour == dt_utils.now().hour:
                 LOGGER.debug(
                     "Returning '%s' as current price",
-                    (
-                        price["price"]["total"]
-                        if self.include_vat
-                        else price["price"]["value"]
-                    ),
+                    (price["price"]["total"] if vat else price["price"]["value"]),
                 )
-                return (
-                    price["price"]["total"]
-                    if self.include_vat
-                    else price["price"]["value"]
-                )
+                return price["price"]["total"] if vat else price["price"]["value"]
 
-    def get_spot(self) -> str:
+    def get_spot(self, vat: bool = True) -> str:
         """Get spotprice"""
         for price in self.prices_today:
             if price["date"].hour == dt_utils.now().hour:
@@ -140,17 +131,17 @@ class StromligningAPI:
                     "Returning '%s' as current spotprice",
                     (
                         price["details"]["electricity"]["total"]
-                        if self.include_vat
+                        if vat
                         else price["details"]["electricity"]["value"]
                     ),
                 )
                 return (
                     price["details"]["electricity"]["total"]
-                    if self.include_vat
+                    if vat
                     else price["details"]["electricity"]["value"]
                 )
 
-    def get_electricitytax(self) -> str:
+    def get_electricitytax(self, vat: bool = True) -> str:
         """Get electricity tax"""
         for price in self.prices_today:
             if price["date"].hour == dt_utils.now().hour:
@@ -158,29 +149,29 @@ class StromligningAPI:
                     "Returning '%s' as current electricity tax",
                     (
                         price["details"]["electricityTax"]["total"]
-                        if self.include_vat
+                        if vat
                         else price["details"]["electricityTax"]["value"]
                     ),
                 )
                 return (
                     price["details"]["electricityTax"]["total"]
-                    if self.include_vat
+                    if vat
                     else price["details"]["electricityTax"]["value"]
                 )
 
-    def mean(self, data: list) -> float:
+    def mean(self, data: list, vat: bool = True) -> float:
         """Calculate mean value of list."""
         val = 0
         num = 0
 
         for i in data:
-            val += i["price"]["total"] if self.include_vat else i["price"]["value"]
+            val += i["price"]["total"] if vat else i["price"]["value"]
             num += 1
 
         return val / num
 
     def get_specific_today(
-        self, type: str, full_day: bool = False, date: bool = False
+        self, type: str, full_day: bool = False, date: bool = False, vat: bool = True
     ) -> str | datetime:
         """Get today specific price and time."""
         if not full_day:
@@ -200,9 +191,7 @@ class StromligningAPI:
 
         ret = {
             "date": res["date"].strftime("%H:%M:%S"),
-            "price": (
-                res["price"]["total"] if self.include_vat else res["price"]["value"]
-            ),
+            "price": (res["price"]["total"] if vat else res["price"]["value"]),
         }
 
         return ret["date"] if date else ret["price"]

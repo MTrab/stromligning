@@ -10,9 +10,7 @@
             "user": {
                 "data": {
                     "name": "Name for this integration",
-                    "vat": "Show prices including VAT",
-                    "company": "Electricity provider",
-                    "extra_cost_template": "Template for additional costs"
+                    "company": "Electricity provider"
                 }
             }
         }
@@ -28,47 +26,83 @@
             "init": {
                 "data": {
                     "name": "Name for this integration",
-                    "vat": "Show prices including VAT",
-                    "company": "Electricity provider",
-                    "extra_cost_template": "Template for additional costs"
+                    "company": "Electricity provider"
                 }
             }
         }
     },
     "entity": {
         "sensor": {
-            "current_price": {
-                "name": "Current",
+            "current_price_vat": {
+                "name": "Current incl. VAT",
                 "state_attributes": {
                     "prices": {
                         "name": "Prices today"
                     }
                 }
             },
-            "spotprice": {
-                "name": "Spotprice"
+            "current_price_ex_vat": {
+                "name": "Current excl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Prices today"
+                    }
+                }
             },
-            "electricity_tax": {
-                "name": "Electricity tax"
+            "spotprice_vat": {
+                "name": "Spotprice incl. VAT"
             },
-            "today_min": {
-                "name": "Minimum price rest of the day",
+            "spotprice_ex_vat": {
+                "name": "Spotprice excl. VAT"
+            },
+            "electricity_tax_vat": {
+                "name": "Electricity tax incl. VAT"
+            },
+            "electricity_tax_ex_vat": {
+                "name": "Electricity tax excl. VAT"
+            },
+            "today_min_vat": {
+                "name": "Minimum price rest of the day incl. VAT",
                 "state_attributes": {
                     "at": {
                         "name": "At"
                     }
                 }
             },
-            "today_max": {
-                "name": "Maximum price rest of the day",
+            "today_min_ex_vat": {
+                "name": "Minimum price rest of the day excl. VAT",
                 "state_attributes": {
                     "at": {
                         "name": "At"
                     }
                 }
             },
-            "today_mean": {
-                "name": "Mean price rest of the day",
+            "today_max_vat": {
+                "name": "Maximum price rest of the day incl. VAT",
+                "state_attributes": {
+                    "at": {
+                        "name": "At"
+                    }
+                }
+            },
+            "today_max_ex_vat": {
+                "name": "Maximum price rest of the day excl. VAT",
+                "state_attributes": {
+                    "at": {
+                        "name": "At"
+                    }
+                }
+            },
+            "today_mean_vat": {
+                "name": "Mean price rest of the day incl. VAT",
+                "state_attributes": {
+                    "at": {
+                        "name": "At"
+                    }
+                }
+            },
+            "today_mean_ex_vat": {
+                "name": "Mean price rest of the day excl. VAT",
                 "state_attributes": {
                     "at": {
                         "name": "At"
@@ -77,8 +111,23 @@
             }
         },
         "binary_sensor": {
-            "tomorrow_available": {
-                "name": "Prices for tomorrow",
+            "tomorrow_available_vat": {
+                "name": "Prices for tomorrow incl. VAT",
+                "state": {
+                    "on": "Available",
+                    "off": "Not available yet"
+                },
+                "state_attributes": {
+                    "available_at": {
+                        "name": "Available at"
+                    },
+                    "prices": {
+                        "name": "Prices tomorrow"
+                    }
+                }
+            },
+            "tomorrow_available_ex_vat": {
+                "name": "Prices for tomorrow excl. VAT",
                 "state": {
                     "on": "Available",
                     "off": "Not available yet"

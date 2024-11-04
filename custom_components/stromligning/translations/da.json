@@ -10,9 +10,7 @@
             "user": {
                 "data": {
                     "name": "Navn til integrationen",
-                    "vat": "Vis priserne med moms",
-                    "company": "El leverandør",
-                    "extra_cost_template": "Skabelon til ekstra omkostninger"
+                    "company": "El leverandør"
                 }
             }
         }
@@ -28,52 +26,98 @@
             "init": {
                 "data": {
                     "name": "Navn til integrationen",
-                    "vat": "Vis priserne med moms",
-                    "company": "El leverandør",
-                    "extra_cost_template": "Skabelon til ekstra omkostninger"
+                    "company": "El leverandør"
                 }
             }
         }
     },
     "entity": {
         "sensor": {
-            "current_price": {
-                "name": "Aktuel",
+            "current_price_vat": {
+                "name": "Aktuel inkl. moms",
                 "state_attributes": {
                     "prices": {
                         "name": "Priser i dag"
                     }
                 }
             },
-            "spotprice": {
-                "name": "Spotpris"
+            "current_price_ex_vat": {
+                "name": "Aktuel ekskl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Priser i dag"
+                    }
+                }
             },
-            "electricity_tax": {
-                "name": "Elafgift"
+            "spotprice_vat": {
+                "name": "Spotpris inkl. moms"
             },
-            "today_min": {
-                "name": "Minimum pris resten af dagen",
+            "spotprice_ex_vat": {
+                "name": "Spotpris ekskl. moms"
+            },
+            "electricity_tax_vat": {
+                "name": "Elafgift inkl. moms"
+            },
+            "electricity_tax_ex_vat": {
+                "name": "Elafgift ekskl. moms"
+            },
+            "today_min_vat": {
+                "name": "Minimum pris resten af dagen inkl. moms",
                 "state_attributes": {
                     "at": {
                         "name": "Tidspunkt"
                     }
                 }
             },
-            "today_max": {
-                "name": "Maximum pris resten af dagen",
+            "today_min_ex_vat": {
+                "name": "Minimum pris resten af dagen ekskl. moms",
                 "state_attributes": {
                     "at": {
                         "name": "Tidspunkt"
                     }
                 }
             },
-            "today_mean": {
-                "name": "Gennemsnits pris resten af dagen"
+            "today_max_vat": {
+                "name": "Maximum pris resten af dagen inkl. moms",
+                "state_attributes": {
+                    "at": {
+                        "name": "Tidspunkt"
+                    }
+                }
+            },
+            "today_max_ex_vat": {
+                "name": "Maximum pris resten af dagen ekskl. moms",
+                "state_attributes": {
+                    "at": {
+                        "name": "Tidspunkt"
+                    }
+                }
+            },
+            "today_mean_vat": {
+                "name": "Gennemsnits pris resten af dagen inkl. moms"
+            },
+            "today_mean_ex_vat": {
+                "name": "Gennemsnits pris resten af dagen ekskl. moms"
             }
         },
         "binary_sensor": {
-            "tomorrow_available": {
-                "name": "Priser for i morgen",
+            "tomorrow_available_vat": {
+                "name": "Priser for i morgen inkl. moms",
+                "state": {
+                    "on": "Klar",
+                    "off": "Endnu ikke klar"
+                },
+                "state_attributes": {
+                    "available_at": {
+                        "name": "Forventes klar"
+                    },
+                    "prices": {
+                        "name": "Priser for i morgen"
+                    }
+                }
+            },
+            "tomorrow_available_ex_vat": {
+                "name": "Priser for i morgen ekskl. moms",
                 "state": {
                     "on": "Klar",
                     "off": "Endnu ikke klar"
