@@ -187,7 +187,7 @@ class StromligningAPI:
         elif type.lower() == "max":
             res = max(dataset, key=lambda k: k["price"]["value"])
         elif type.lower() == "mean":
-            return self.mean(dataset)
+            return self.mean(dataset, vat)
 
         ret = {
             "date": res["date"].strftime("%H:%M:%S"),
@@ -210,7 +210,7 @@ class StromligningAPI:
         elif type.lower() == "max":
             res = max(dataset, key=lambda k: k["price"]["value"])
         elif type.lower() == "mean":
-            return self.mean(dataset)
+            return self.mean(dataset, vat)
 
         ret = {
             "date": res["date"].strftime("%H:%M:%S"),
