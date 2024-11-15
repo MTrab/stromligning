@@ -98,6 +98,62 @@
             },
             "today_mean_ex_vat": {
                 "name": "Gennemsnits pris resten af dagen ekskl. moms"
+            },
+            "tomorrow_min_vat": {
+                "name": "Minimum pris i morgen inkl. moms",
+                "state": {
+                    "unknown": "Ukendt"
+                },
+                "state_attributes": {
+                    "at": {
+                        "name": "Tidspunkt"
+                    }
+                }
+            },
+            "tomorrow_min_ex_vat": {
+                "name": "Minimum pris i morgen ekskl. moms",
+                "state": {
+                    "unknown": "Ukendt"
+                },
+                "state_attributes": {
+                    "at": {
+                        "name": "Tidspunkt"
+                    }
+                }
+            },
+            "tomorrow_max_vat": {
+                "name": "Maximum pris i morgen inkl. moms",
+                "state": {
+                    "unknown": "Ukendt"
+                },
+                "state_attributes": {
+                    "at": {
+                        "name": "Tidspunkt"
+                    }
+                }
+            },
+            "tomorrow_max_ex_vat": {
+                "name": "Maximum pris i morgen ekskl. moms",
+                "state": {
+                    "unknown": "Ukendt"
+                },
+                "state_attributes": {
+                    "at": {
+                        "name": "Tidspunkt"
+                    }
+                }
+            },
+            "tomorrow_mean_vat": {
+                "name": "Gennemsnits pris i morgen inkl. moms",
+                "state": {
+                    "unknown": "Ukendt"
+                }
+            },
+            "tomorrow_mean_ex_vat": {
+                "name": "Gennemsnits pris i morgen ekskl. moms",
+                "state": {
+                    "unknown": "Ukendt"
+                }
             }
         },
         "binary_sensor": {
