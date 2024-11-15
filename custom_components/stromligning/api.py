@@ -195,3 +195,26 @@ class StromligningAPI:
         }
 
         return ret["date"] if date else ret["price"]
+
+    def get_specific_tomorrow(
+        self, type: str, date: bool = False, vat: bool = True
+    ) -> str | datetime:
+        """Get tomorrow specific price and time."""
+        if not self.tomorrow_available:
+            return None
+
+        dataset = self.prices_tomorrow
+
+        if type.lower() == "min":
+            res = min(dataset, key=lambda k: k["price"]["value"])
+        elif type.lower() == "max":
+            res = max(dataset, key=lambda k: k["price"]["value"])
+        elif type.lower() == "mean":
+            return self.mean(dataset)
+
+        ret = {
+            "date": res["date"].strftime("%H:%M:%S"),
+            "price": (res["price"]["total"] if vat else res["price"]["value"]),
+        }
+
+        return ret["date"] if date else ret["price"]

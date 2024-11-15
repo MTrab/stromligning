@@ -94,19 +94,65 @@
                 }
             },
             "today_mean_vat": {
-                "name": "Mean price rest of the day incl. VAT",
+                "name": "Mean price rest of the day incl. VAT"
+            },
+            "today_mean_ex_vat": {
+                "name": "Mean price rest of the day excl. VAT"
+            },
+            "tomorrow_min_vat": {
+                "name": "Minimum price tomorrow incl. VAT",
+                "state": {
+                    "unknown": "Unknown"
+                },
                 "state_attributes": {
                     "at": {
                         "name": "At"
                     }
                 }
             },
-            "today_mean_ex_vat": {
-                "name": "Mean price rest of the day excl. VAT",
+            "tomorrow_min_ex_vat": {
+                "name": "Minimum price tomorrow excl. VAT",
+                "state": {
+                    "unknown": "Unknown"
+                },
                 "state_attributes": {
                     "at": {
                         "name": "At"
                     }
+                }
+            },
+            "tomorrow_max_vat": {
+                "name": "Maximum price tomorrow incl. VAT",
+                "state": {
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "at": {
+                        "name": "At"
+                    }
+                }
+            },
+            "tomorrow_max_ex_vat": {
+                "name": "Maximum price tomorrow excl. VAT",
+                "state": {
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "at": {
+                        "name": "At"
+                    }
+                }
+            },
+            "tomorrow_mean_vat": {
+                "name": "Mean price tomorrow incl. VAT",
+                "state": {
+                    "unknown": "Unknown"
+                }
+            },
+            "tomorrow_mean_ex_vat": {
+                "name": "Mean price tomorrow excl. VAT",
+                "state": {
+                    "unknown": "Unknown"
                 }
             }
         },

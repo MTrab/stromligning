@@ -161,6 +161,84 @@ SENSORS = [
         entity_registry_enabled_default=False,
         translation_key="today_mean_ex_vat",
     ),
+    StromligningSensorEntityDescription(
+        key="tomorrow_min_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_tomorrow(
+            "min", vat=True
+        ),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=True,
+        translation_key="tomorrow_min_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="tomorrow_min_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_tomorrow(
+            "min", vat=False
+        ),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="tomorrow_min_ex_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="tomorrow_max_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_tomorrow(
+            "max", vat=True
+        ),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=True,
+        translation_key="tomorrow_max_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="tomorrow_max_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_tomorrow(
+            "max", vat=False
+        ),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="tomorrow_max_ex_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="tomorrow_mean_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_tomorrow(
+            "mean", vat=True
+        ),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=True,
+        translation_key="tomorrow_mean_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="tomorrow_mean_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_specific_tomorrow(
+            "mean", vat=False
+        ),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="tomorrow_mean_ex_vat",
+    ),
 ]
 
 
@@ -281,28 +359,59 @@ class StromligningSensor(SensorEntity):
             self._attr_extra_state_attributes.update(
                 {"at": self.api.get_specific_today("max", date=True, vat=False)}
             )
+        elif self.entity_description.key == "tomorrow_min_vat":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"at": self.api.get_specific_tomorrow("min", date=True, vat=True)}
+            )
+        elif self.entity_description.key == "tomorrow_min_ex_vat":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"at": self.api.get_specific_tomorrow("min", date=True, vat=False)}
+            )
+        elif self.entity_description.key == "tomorrow_max_vat":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"at": self.api.get_specific_tomorrow("max", date=True, vat=True)}
+            )
+        elif self.entity_description.key == "tomorrow_max_ex_vat":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"at": self.api.get_specific_tomorrow("max", date=True, vat=False)}
+            )
 
     async def handle_update(self) -> None:
         """Handle data update."""
         try:
+            # if (
+            #     self.entity_description.key
+            #     in [
+            #         "tomorrow_max",
+            #         "tomorrow_min",
+            #         "tomorrow_mean",
+            #     ]
+            #     and not self.api.tomorrow_available
+            # ):
+            #     self._attr_native_value = None
+            # else:
             self._attr_native_value = self.entity_description.value_fn(
                 self._hass.data[DOMAIN][self._config.entry_id]
             )
 
-            template_value = self._cost_template.async_render()
+            # template_value = self._cost_template.async_render()
 
-            if not isinstance(template_value, int | float):
-                try:
-                    template_value = float(template_value)
-                except (TypeError, ValueError):
-                    LOGGER.exception(
-                        "Failed to convert %s %s to float",
-                        template_value,
-                        type(template_value),
-                    )
-                    raise
+            # if not isinstance(template_value, int | float):
+            #     try:
+            #         template_value = float(template_value)
+            #     except (TypeError, ValueError):
+            #         LOGGER.exception(
+            #             "Failed to convert %s %s to float",
+            #             template_value,
+            #             type(template_value),
+            #         )
+            #         raise
 
-            self._attr_native_value += template_value
+            # self._attr_native_value += template_value
 
             LOGGER.debug(
                 "Setting value for '%s' to: %s",
