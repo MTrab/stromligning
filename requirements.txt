@@ -1,5 +1,5 @@
 async-retrying==0.2.2
 colorlog==6.9.0
 homeassistant==2024.11.1
-ruff==0.7.3
+ruff==0.8.0
 pip>=21.0,<24.4
