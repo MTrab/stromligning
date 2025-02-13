@@ -1,6 +1,6 @@
 {
     "name": "Strømligning",
-    "image": "mcr.microsoft.com/devcontainers/python:3.12-bullseye",
+    "image": "mcr.microsoft.com/devcontainers/python:3.13-bullseye",
     "postCreateCommand": "scripts/setup",
     "appPort": [
         "9127:8123"
