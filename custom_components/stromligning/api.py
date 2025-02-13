@@ -253,3 +253,11 @@ class StromligningAPI:
             data_refresh = data_refresh + timedelta(days=1)
 
         return data_refresh
+
+    def get_net_owner(self) -> str:
+        """Get net operator."""
+        return self._data.supplier["companyName"]
+
+    def get_power_provider(self) -> str:
+        """Get power provider."""
+        return self._data.company["name"]
