@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components import sensor
@@ -39,6 +39,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="current_price_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="current_price_ex_vat",
@@ -50,6 +51,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="current_price_ex_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="spotprice_vat",
@@ -61,6 +63,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="spotprice_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="spotprice_ex_vat",
@@ -72,6 +75,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="spotprice_ex_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="electricity_tax_vat",
@@ -83,6 +87,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="electricity_tax_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="electricity_tax_ex_vat",
@@ -94,6 +99,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="electricity_tax_ex_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="today_min_vat",
@@ -105,6 +111,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="today_min_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="today_min_ex_vat",
@@ -116,6 +123,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="today_min_ex_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="today_max_vat",
@@ -127,6 +135,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="today_max_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="today_max_ex_vat",
@@ -138,6 +147,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="today_max_ex_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="today_mean_vat",
@@ -149,6 +159,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="today_mean_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="today_mean_ex_vat",
@@ -162,6 +173,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="today_mean_ex_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_min_vat",
@@ -175,6 +187,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="tomorrow_min_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_min_ex_vat",
@@ -188,6 +201,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="tomorrow_min_ex_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_max_vat",
@@ -201,6 +215,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="tomorrow_max_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_max_ex_vat",
@@ -214,6 +229,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="tomorrow_max_ex_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_mean_vat",
@@ -227,6 +243,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="tomorrow_mean_vat",
+        unit_of_measurement="kr/kWh",
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_mean_ex_vat",
@@ -240,6 +257,37 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="tomorrow_mean_ex_vat",
+        unit_of_measurement="kr/kWh",
+    ),
+    StromligningSensorEntityDescription(
+        key="next_data_refresh",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=None,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:clock-fast",
+        value_fn=lambda stromligning: stromligning.get_next_update(),
+        entity_registry_enabled_default=True,
+        translation_key="next_data_refresh",
+    ),
+    StromligningSensorEntityDescription(
+        key="net_owner",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=None,
+        device_class=None,
+        icon="mdi:transmission-tower-export",
+        value_fn=lambda stromligning: stromligning.get_net_owner(),
+        entity_registry_enabled_default=False,
+        translation_key="net_owner",
+    ),
+    StromligningSensorEntityDescription(
+        key="provider",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=None,
+        device_class=None,
+        icon="mdi:home-lightning-bolt",
+        value_fn=lambda stromligning: stromligning.get_power_provider(),
+        entity_registry_enabled_default=False,
+        translation_key="provider",
     ),
 ]
 
@@ -291,7 +339,9 @@ class StromligningSensor(SensorEntity):
             "manufacturer": "Strømligning",
         }
 
-        self._attr_native_unit_of_measurement = "kr/kWh"
+        self._attr_native_unit_of_measurement = (
+            self.entity_description.unit_of_measurement
+        )
 
         async_dispatcher_connect(
             self._hass,

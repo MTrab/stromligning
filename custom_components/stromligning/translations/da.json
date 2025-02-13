@@ -61,6 +61,15 @@
             "electricity_tax_ex_vat": {
                 "name": "Elafgift ekskl. moms"
             },
+            "net_owner": {
+                "name": "Elnet operatør"
+            },
+            "next_data_refresh": {
+                "name": "Næste data opdatering"
+            },
+            "provider": {
+                "name": "El aftale"
+            },
             "today_min_vat": {
                 "name": "Minimum pris resten af dagen inkl. moms",
                 "state_attributes": {

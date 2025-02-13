@@ -7,7 +7,6 @@ import logging
 
 from homeassistant.components import binary_sensor
 from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
     BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
@@ -107,6 +106,9 @@ class StromligningBinarySensor(BinarySensorEntity):
         """Handle attributes."""
         if self.entity_description.key == "tomorrow_available_vat":
             self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+            )
             price_set: list = []
             for price in self.api.prices_tomorrow:
                 price_set.append(
@@ -118,12 +120,11 @@ class StromligningBinarySensor(BinarySensorEntity):
                 )
 
                 self._attr_extra_state_attributes.update({"prices": price_set})
-            else:
-                self._attr_extra_state_attributes.update(
-                    {"available_at": self.api.next_update}
-                )
         elif self.entity_description.key == "tomorrow_available_ex_vat":
             self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+            )
             price_set: list = []
             for price in self.api.prices_tomorrow:
                 price_set.append(
@@ -135,10 +136,6 @@ class StromligningBinarySensor(BinarySensorEntity):
                 )
 
                 self._attr_extra_state_attributes.update({"prices": price_set})
-            else:
-                self._attr_extra_state_attributes.update(
-                    {"available_at": self.api.next_update}
-                )
 
     async def handle_update(self) -> None:
         """Handle data update."""

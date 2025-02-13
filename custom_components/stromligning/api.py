@@ -1,14 +1,15 @@
 """API connector for Stromligning."""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_utils
 from pystromligning import Stromligning
+from pystromligning.exceptions import TooManyRequests
 
-from .const import CONF_COMPANY, CONF_USE_VAT
+from .const import CONF_COMPANY
 
 RETRY_MINUTES = 5
 MAX_RETRY_MINUTES = 60
@@ -66,7 +67,14 @@ class StromligningAPI:
             .isoformat()
             .replace("+00:00", ".000Z")
         )
-        await self.hass.async_add_executor_job(self._data.update, today_midnight_utc)
+        try:
+            await self.hass.async_add_executor_job(
+                self._data.update, today_midnight_utc
+            )
+        except TooManyRequests:
+            LOGGER.info(
+                "You made too many requests to the API within a 15 minutes window - try again later"
+            )
 
     async def prepare_data(self) -> None:
         """Prepare the data for use in Home Assistant."""
@@ -159,7 +167,7 @@ class StromligningAPI:
                     else price["details"]["electricityTax"]["value"]
                 )
 
-    def mean(self, data: list, vat: bool = True) -> float:
+    def mean(self, data: list, vat: bool = True) -> float | None:
         """Calculate mean value of list."""
         val = 0
         num = 0
@@ -168,12 +176,18 @@ class StromligningAPI:
             val += i["price"]["total"] if vat else i["price"]["value"]
             num += 1
 
-        return val / num
+        return val / num if num > 0 else None
 
     def get_specific_today(
-        self, type: str, full_day: bool = False, date: bool = False, vat: bool = True
+        self,
+        option_type: str,
+        full_day: bool = False,
+        date: bool = False,
+        vat: bool = True,
     ) -> str | datetime:
         """Get today specific price and time."""
+        res = None
+
         if not full_day:
             dataset: list = []
             for price in self.prices_today:
@@ -182,11 +196,11 @@ class StromligningAPI:
         else:
             dataset = self.prices_today
 
-        if type.lower() == "min":
+        if option_type.lower() == "min":
             res = min(dataset, key=lambda k: k["price"]["value"])
-        elif type.lower() == "max":
+        elif option_type.lower() == "max":
             res = max(dataset, key=lambda k: k["price"]["value"])
-        elif type.lower() == "mean":
+        elif option_type.lower() == "mean":
             return self.mean(dataset, vat)
 
         ret = {
@@ -197,19 +211,20 @@ class StromligningAPI:
         return ret["date"] if date else ret["price"]
 
     def get_specific_tomorrow(
-        self, type: str, date: bool = False, vat: bool = True
+        self, option_type: str, date: bool = False, vat: bool = True
     ) -> str | datetime:
         """Get tomorrow specific price and time."""
         if not self.tomorrow_available:
             return None
 
         dataset = self.prices_tomorrow
+        res = None
 
-        if type.lower() == "min":
+        if option_type.lower() == "min":
             res = min(dataset, key=lambda k: k["price"]["value"])
-        elif type.lower() == "max":
+        elif option_type.lower() == "max":
             res = max(dataset, key=lambda k: k["price"]["value"])
-        elif type.lower() == "mean":
+        elif option_type.lower() == "mean":
             return self.mean(dataset, vat)
 
         ret = {
@@ -218,3 +233,31 @@ class StromligningAPI:
         }
 
         return ret["date"] if date else ret["price"]
+
+    def get_next_update(self) -> datetime:
+        """Get next API update timestamp."""
+        n_update = self.next_update.split(":")
+
+        data_refresh = dt_utils.now().replace(
+            hour=int(n_update[0]),
+            minute=int(n_update[1]),
+            second=int(n_update[2]),
+            microsecond=0,
+        )
+
+        if dt_utils.now() > data_refresh and self.tomorrow_available is False:
+            data_refresh = data_refresh.replace(
+                hour=dt_utils.now().hour + 1, minute=0, second=2
+            )
+        elif dt_utils.now().hour > 13:
+            data_refresh = data_refresh + timedelta(days=1)
+
+        return data_refresh
+
+    def get_net_owner(self) -> str:
+        """Get net operator."""
+        return self._data.supplier["companyName"]
+
+    def get_power_provider(self) -> str:
+        """Get power provider."""
+        return self._data.company["name"]
