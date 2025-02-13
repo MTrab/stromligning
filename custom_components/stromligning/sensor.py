@@ -241,6 +241,16 @@ SENSORS = [
         entity_registry_enabled_default=False,
         translation_key="tomorrow_mean_ex_vat",
     ),
+    StromligningSensorEntityDescription(
+        key="next_data_refresh",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=None,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:clock-fast",
+        value_fn=lambda stromligning: stromligning.get_next_update(),
+        entity_registry_enabled_default=True,
+        translation_key="next_data_refresh",
+    ),
 ]
 
 
@@ -291,7 +301,7 @@ class StromligningSensor(SensorEntity):
             "manufacturer": "Strømligning",
         }
 
-        self._attr_native_unit_of_measurement = "kr/kWh"
+        self._attr_native_unit_of_measurement = "kr/kWh" if not self.entity_description.key == "next_data_refresh" else None
 
         async_dispatcher_connect(
             self._hass,

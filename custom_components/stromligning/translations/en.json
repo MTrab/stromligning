@@ -61,6 +61,9 @@
             "electricity_tax_ex_vat": {
                 "name": "Electricity tax excl. VAT"
             },
+            "next_data_refresh": {
+                "name": "Next data update"
+            },
             "today_min_vat": {
                 "name": "Minimum price rest of the day incl. VAT",
                 "state_attributes": {
