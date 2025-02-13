@@ -237,7 +237,7 @@ class StromligningAPI:
     def get_next_update(self) -> datetime:
         """Get next API update timestamp."""
         n_update = self.next_update.split(":")
-        LOGGER.debug(self.next_update)
+
         data_refresh = dt_utils.now().replace(
             hour=int(n_update[0]),
             minute=int(n_update[1]),
