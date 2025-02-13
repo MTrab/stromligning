@@ -167,7 +167,7 @@ class StromligningAPI:
                     else price["details"]["electricityTax"]["value"]
                 )
 
-    def mean(self, data: list, vat: bool = True) -> float:
+    def mean(self, data: list, vat: bool = True) -> float | None:
         """Calculate mean value of list."""
         val = 0
         num = 0
@@ -176,7 +176,7 @@ class StromligningAPI:
             val += i["price"]["total"] if vat else i["price"]["value"]
             num += 1
 
-        return val / num
+        return val / num if num > 0 else None
 
     def get_specific_today(
         self,
