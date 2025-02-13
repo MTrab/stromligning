@@ -218,3 +218,16 @@ class StromligningAPI:
         }
 
         return ret["date"] if date else ret["price"]
+
+    def get_next_update(self) -> datetime:
+        """Get next API update timestamp."""
+        n_update = self.next_update.split(':')
+        LOGGER.debug(self.next_update)
+        data_refresh = dt_utils.now().replace(hour=int(n_update[0]),minute=int(n_update[1]),second=int(n_update[2]),microsecond=0)
+
+        if dt_utils.now() > data_refresh and self.tomorrow_available is False:
+            data_refresh = data_refresh.replace(hour=dt_utils.now().hour+1,minute=0,second=2)
+        elif dt_utils.now().hour > 13:
+            data_refresh = data_refresh + timedelta(days=1)
+
+        return data_refresh

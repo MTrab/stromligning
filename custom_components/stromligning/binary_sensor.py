@@ -120,7 +120,7 @@ class StromligningBinarySensor(BinarySensorEntity):
                 self._attr_extra_state_attributes.update({"prices": price_set})
             else:
                 self._attr_extra_state_attributes.update(
-                    {"available_at": self.api.next_update}
+                    {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
                 )
         elif self.entity_description.key == "tomorrow_available_ex_vat":
             self._attr_extra_state_attributes = {}
@@ -137,7 +137,7 @@ class StromligningBinarySensor(BinarySensorEntity):
                 self._attr_extra_state_attributes.update({"prices": price_set})
             else:
                 self._attr_extra_state_attributes.update(
-                    {"available_at": self.api.next_update}
+                    {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
                 )
 
     async def handle_update(self) -> None:
