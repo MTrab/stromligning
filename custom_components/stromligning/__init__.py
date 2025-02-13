@@ -1,5 +1,6 @@
 """Add support for Stromligning energy prices."""
 
+from datetime import datetime
 import logging
 from random import randint
 
@@ -57,6 +58,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def new_hour(n):  # type: ignore pylint: disable=unused-argument, invalid-name
         """Tell the sensor to update to a new hour."""
         LOGGER.debug("New hour, updating state")
+
+        if len(api.prices_tomorrow) == 0 and datetime.now().hour > 13:
+            LOGGER.info("Prices for tomorrow is missing - trying to fetch data from API")
+            await api.update_prices()
+            await api.prepare_data()
 
         async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
 
