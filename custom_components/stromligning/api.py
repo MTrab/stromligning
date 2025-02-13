@@ -7,6 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_utils
 from pystromligning import Stromligning
+from pystromligning.exceptions import TooManyRequests
 
 from .const import CONF_COMPANY
 
@@ -66,7 +67,14 @@ class StromligningAPI:
             .isoformat()
             .replace("+00:00", ".000Z")
         )
-        await self.hass.async_add_executor_job(self._data.update, today_midnight_utc)
+        try:
+            await self.hass.async_add_executor_job(
+                self._data.update, today_midnight_utc
+            )
+        except TooManyRequests:
+            LOGGER.info(
+                "You made too many requests to the API within a 15 minutes window - try again later"
+            )
 
     async def prepare_data(self) -> None:
         """Prepare the data for use in Home Assistant."""
@@ -229,7 +237,7 @@ class StromligningAPI:
     def get_next_update(self) -> datetime:
         """Get next API update timestamp."""
         n_update = self.next_update.split(":")
-        LOGGER.debug(self.next_update)
+
         data_refresh = dt_utils.now().replace(
             hour=int(n_update[0]),
             minute=int(n_update[1]),

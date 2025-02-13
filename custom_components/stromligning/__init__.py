@@ -1,15 +1,17 @@
 """Add support for Stromligning energy prices."""
 
-from datetime import datetime
 import logging
+from datetime import datetime
 from random import randint
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.loader import async_get_integration
 from homeassistant.util import slugify as util_slugify
+from pystromligning.exceptions import TooManyRequests
 
 from .api import StromligningAPI
 from .const import DOMAIN, PLATFORMS, STARTUP, UPDATE_SIGNAL
@@ -28,63 +30,75 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     api = StromligningAPI(hass, entry, rand_min, rand_sec)
     hass.data[DOMAIN][entry.entry_id] = api
 
-    await api.set_location()
-    await api.update_prices()
-    await api.prepare_data()
-
-    async def get_new_data(n):  # type: ignore pylint: disable=unused-argument, invalid-name
-        """Fetch new data for tomorrows prices at 13:00ish CET."""
-        LOGGER.debug("Getting latest dataset")
-
+    try:
+        await api.set_location()
         await api.update_prices()
         await api.prepare_data()
 
-        async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
+        async def get_new_data(n):  # type: ignore pylint: disable=unused-argument, invalid-name
+            """Fetch new data for tomorrows prices at 13:00ish CET."""
+            LOGGER.debug("Getting latest dataset")
 
-    async def new_day(n):  # type: ignore pylint: disable=unused-argument, invalid-name
-        """Handle data on new day."""
-        LOGGER.debug("New day function called")
-
-        if len(api.prices_tomorrow) > 0:
-            api.prices_today = api.prices_tomorrow
-            api.prices_tomorrow = []
-            api.tomorrow_available = False
-        else:
             await api.update_prices()
             await api.prepare_data()
 
-        async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
+            async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
 
-    async def new_hour(n):  # type: ignore pylint: disable=unused-argument, invalid-name
-        """Tell the sensor to update to a new hour."""
-        LOGGER.debug("New hour, updating state")
+        async def new_day(n):  # type: ignore pylint: disable=unused-argument, invalid-name
+            """Handle data on new day."""
+            LOGGER.debug("New day function called")
 
-        if len(api.prices_tomorrow) == 0 and datetime.now().hour > 13:
-            LOGGER.info("Prices for tomorrow is missing - trying to fetch data from API")
-            await api.update_prices()
-            await api.prepare_data()
+            if len(api.prices_tomorrow) > 0:
+                api.prices_today = api.prices_tomorrow
+                api.prices_tomorrow = []
+                api.tomorrow_available = False
+            else:
+                await api.update_prices()
+                await api.prepare_data()
 
-        async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
+            async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
 
-    # Handle dataset updates
-    update_tomorrow = async_track_time_change(
-        hass,
-        get_new_data,
-        hour=13,  # LOCAL time!!
-        minute=rand_min,
-        second=rand_sec,
-    )
+        async def new_hour(n):  # type: ignore pylint: disable=unused-argument, invalid-name
+            """Tell the sensor to update to a new hour."""
+            LOGGER.debug("New hour, updating state")
 
-    update_new_hour = async_track_time_change(hass, new_hour, minute=0, second=1)
-    update_new_day = async_track_time_change(hass, new_day, hour=0, minute=0, second=1)
+            if len(api.prices_tomorrow) == 0 and datetime.now().hour > 13:
+                LOGGER.info(
+                    "Prices for tomorrow is missing - trying to fetch data from API"
+                )
+                await api.update_prices()
+                await api.prepare_data()
 
-    api.listeners.append(update_new_hour)
-    api.listeners.append(update_new_day)
-    api.listeners.append(update_tomorrow)
+            async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        # Handle dataset updates
+        update_tomorrow = async_track_time_change(
+            hass,
+            get_new_data,
+            hour=13,  # LOCAL time!!
+            minute=rand_min,
+            second=rand_sec,
+        )
 
-    return True
+        update_new_hour = async_track_time_change(hass, new_hour, minute=0, second=1)
+        update_new_day = async_track_time_change(
+            hass, new_day, hour=0, minute=0, second=1
+        )
+
+        api.listeners.append(update_new_hour)
+        api.listeners.append(update_new_day)
+        api.listeners.append(update_tomorrow)
+
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+        return True
+    except TooManyRequests:
+        raise ConfigEntryNotReady("Too many requests to the API within 15 minutes")
+        # LOGGER.info(
+        #     "You made too many requests to the API within a 15 minutes window - try again later"
+        # )
+
+        # return False
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
