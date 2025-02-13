@@ -1,14 +1,14 @@
 """API connector for Stromligning."""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_utils
 from pystromligning import Stromligning
 
-from .const import CONF_COMPANY, CONF_USE_VAT
+from .const import CONF_COMPANY
 
 RETRY_MINUTES = 5
 MAX_RETRY_MINUTES = 60
@@ -171,9 +171,15 @@ class StromligningAPI:
         return val / num
 
     def get_specific_today(
-        self, type: str, full_day: bool = False, date: bool = False, vat: bool = True
+        self,
+        option_type: str,
+        full_day: bool = False,
+        date: bool = False,
+        vat: bool = True,
     ) -> str | datetime:
         """Get today specific price and time."""
+        res = None
+
         if not full_day:
             dataset: list = []
             for price in self.prices_today:
@@ -182,11 +188,11 @@ class StromligningAPI:
         else:
             dataset = self.prices_today
 
-        if type.lower() == "min":
+        if option_type.lower() == "min":
             res = min(dataset, key=lambda k: k["price"]["value"])
-        elif type.lower() == "max":
+        elif option_type.lower() == "max":
             res = max(dataset, key=lambda k: k["price"]["value"])
-        elif type.lower() == "mean":
+        elif option_type.lower() == "mean":
             return self.mean(dataset, vat)
 
         ret = {
@@ -197,19 +203,20 @@ class StromligningAPI:
         return ret["date"] if date else ret["price"]
 
     def get_specific_tomorrow(
-        self, type: str, date: bool = False, vat: bool = True
+        self, option_type: str, date: bool = False, vat: bool = True
     ) -> str | datetime:
         """Get tomorrow specific price and time."""
         if not self.tomorrow_available:
             return None
 
         dataset = self.prices_tomorrow
+        res = None
 
-        if type.lower() == "min":
+        if option_type.lower() == "min":
             res = min(dataset, key=lambda k: k["price"]["value"])
-        elif type.lower() == "max":
+        elif option_type.lower() == "max":
             res = max(dataset, key=lambda k: k["price"]["value"])
-        elif type.lower() == "mean":
+        elif option_type.lower() == "mean":
             return self.mean(dataset, vat)
 
         ret = {
@@ -221,12 +228,19 @@ class StromligningAPI:
 
     def get_next_update(self) -> datetime:
         """Get next API update timestamp."""
-        n_update = self.next_update.split(':')
+        n_update = self.next_update.split(":")
         LOGGER.debug(self.next_update)
-        data_refresh = dt_utils.now().replace(hour=int(n_update[0]),minute=int(n_update[1]),second=int(n_update[2]),microsecond=0)
+        data_refresh = dt_utils.now().replace(
+            hour=int(n_update[0]),
+            minute=int(n_update[1]),
+            second=int(n_update[2]),
+            microsecond=0,
+        )
 
         if dt_utils.now() > data_refresh and self.tomorrow_available is False:
-            data_refresh = data_refresh.replace(hour=dt_utils.now().hour+1,minute=0,second=2)
+            data_refresh = data_refresh.replace(
+                hour=dt_utils.now().hour + 1, minute=0, second=2
+            )
         elif dt_utils.now().hour > 13:
             data_refresh = data_refresh + timedelta(days=1)
 
