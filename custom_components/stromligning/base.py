@@ -7,6 +7,7 @@ from homeassistant.components.binary_sensor import BinarySensorEntityDescription
 from homeassistant.components.sensor import SensorEntityDescription
 
 from .api import StromligningAPI
+from .const import UPDATE_SIGNAL
 
 
 @dataclass
@@ -23,6 +24,7 @@ class StromligningSensorEntityDescription(
     """Describes a Stromligning sensor."""
 
     unit_fn: Callable[[StromligningAPI], None] = None
+    update_signal: str = UPDATE_SIGNAL
 
 
 @dataclass

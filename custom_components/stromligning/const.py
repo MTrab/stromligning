@@ -23,3 +23,4 @@ DOMAIN = "stromligning"
 PLATFORMS = ["sensor", "binary_sensor"]
 
 UPDATE_SIGNAL = f"{DOMAIN}_SIGNAL_UPDATE"
+UPDATE_SIGNAL_NEXT = f"{DOMAIN}_SIGNAL_UPDATE_NEXT"

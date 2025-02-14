@@ -5,11 +5,13 @@ from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_utils
+from homeassistant.util import slugify as util_slugify
 from pystromligning import Stromligning
 from pystromligning.exceptions import TooManyRequests
 
-from .const import CONF_COMPANY
+from .const import CONF_COMPANY, UPDATE_SIGNAL_NEXT
 
 RETRY_MINUTES = 5
 MAX_RETRY_MINUTES = 60
@@ -120,6 +122,7 @@ class StromligningAPI:
             LOGGER.debug("Prices for tomorrow are NOT valid")
             self.prices_tomorrow = []
             self.tomorrow_available = False
+        async_dispatcher_send(self.hass, util_slugify(UPDATE_SIGNAL_NEXT))
 
     def get_current(self, vat: bool = True) -> str:
         """Get the current price"""
