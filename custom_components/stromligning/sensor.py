@@ -306,7 +306,7 @@ SENSORS = [
         device_class=SensorDeviceClass.MONETARY,
         icon="mdi:flash",
         value_fn=lambda stromligning: stromligning.get_surcharge(vat=False),
-        entity_registry_enabled_default=True,
+        entity_registry_enabled_default=False,
         translation_key="surcharge_ex_vat",
         unit_of_measurement="kr/kWh",
     ),
@@ -320,7 +320,7 @@ SENSORS = [
             tariff="systemTariff", vat=True
         ),
         suggested_display_precision=2,
-        entity_registry_enabled_default=False,
+        entity_registry_enabled_default=True,
         translation_key="systemtariff_vat",
         unit_of_measurement="kr/kWh",
     ),
@@ -336,6 +336,34 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="systemtariff_ex_vat",
+        unit_of_measurement="kr/kWh",
+    ),
+    StromligningSensorEntityDescription(
+        key="nettariff_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_get_transmission_tariff(
+            tariff="netTariff", vat=True
+        ),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=True,
+        translation_key="nettariff_vat",
+        unit_of_measurement="kr/kWh",
+    ),
+    StromligningSensorEntityDescription(
+        key="nettariff_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_get_transmission_tariff(
+            tariff="netTariff", vat=False
+        ),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="nettariff_ex_vat",
         unit_of_measurement="kr/kWh",
     ),
 ]
