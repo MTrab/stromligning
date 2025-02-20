@@ -384,9 +384,7 @@ SENSORS = [
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
         icon="mdi:transmission-tower-export",
-        value_fn=lambda stromligning: stromligning.get_distribution(
-            tariff="netTariff", vat=False
-        ),
+        value_fn=lambda stromligning: stromligning.get_distribution(vat=False),
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="distribution_ex_vat",
