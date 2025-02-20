@@ -49,11 +49,11 @@
                     }
                 }
             },
-            "spotprice_vat": {
-                "name": "Spotprice incl. VAT"
+            "distribution_vat": {
+                "name": "Provider transportexpenses incl. VAT"
             },
-            "spotprice_ex_vat": {
-                "name": "Spotprice excl. VAT"
+            "distribution_ex_vat": {
+                "name": "Provider transportexpenses excl. VAT"
             },
             "electricity_tax_vat": {
                 "name": "Electricity tax incl. VAT"
@@ -75,6 +75,12 @@
             },
             "provider": {
                 "name": "Provider agreement"
+            },
+            "spotprice_vat": {
+                "name": "Spotprice incl. VAT"
+            },
+            "spotprice_ex_vat": {
+                "name": "Spotprice excl. VAT"
             },
             "surcharge_vat": {
                 "name": "Spotprice surcharge incl. VAT"

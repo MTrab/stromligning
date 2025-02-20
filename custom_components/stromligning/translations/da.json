@@ -49,11 +49,11 @@
                     }
                 }
             },
-            "spotprice_vat": {
-                "name": "Spotpris inkl. moms"
+            "distribution_vat": {
+                "name": "Transportudgifter til dit lokale netselskab inkl. moms"
             },
-            "spotprice_ex_vat": {
-                "name": "Spotpris ekskl. moms"
+            "distribution_ex_vat": {
+                "name": "Transportudgifter til dit lokale netselskab ekskl. moms"
             },
             "electricity_tax_vat": {
                 "name": "Elafgift inkl. moms"
@@ -75,6 +75,12 @@
             },
             "provider": {
                 "name": "El aftale"
+            },
+            "spotprice_vat": {
+                "name": "Spotpris inkl. moms"
+            },
+            "spotprice_ex_vat": {
+                "name": "Spotpris ekskl. moms"
             },
             "surcharge_vat": {
                 "name": "Tillæg til spotpris inkl. moms"

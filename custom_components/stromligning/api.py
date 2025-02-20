@@ -283,7 +283,7 @@ class StromligningAPI:
                     else price["details"]["surcharge"]["value"]
                 )
 
-    def get_get_transmission_tariff(self, tariff: str, vat: bool = True) -> float:
+    def get_transmission_tariff(self, tariff: str, vat: bool = True) -> float:
         """Get transmission tariff from API."""
         for price in self.prices_today:
             if price["date"].hour == dt_utils.now().hour:
@@ -300,4 +300,22 @@ class StromligningAPI:
                     price["details"]["transmission"][tariff]["total"]
                     if vat
                     else price["details"]["transmission"][tariff]["value"]
+                )
+
+    def get_distribution(self, vat: bool = True) -> float:
+        """Get distribution from API."""
+        for price in self.prices_today:
+            if price["date"].hour == dt_utils.now().hour:
+                LOGGER.debug(
+                    "Returning '%s' as current distribution value",
+                    (
+                        price["details"]["distribution"]["total"]
+                        if vat
+                        else price["details"]["distribution"]["value"]
+                    ),
+                )
+                return (
+                    price["details"]["distribution"]["total"]
+                    if vat
+                    else price["details"]["distribution"]["value"]
                 )
