@@ -315,7 +315,7 @@ SENSORS = [
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
-        icon="mdi:transmission-tower-import",
+        icon="mdi:transmission-tower-export",
         value_fn=lambda stromligning: stromligning.get_transmission_tariff(
             tariff="systemTariff", vat=True
         ),
@@ -329,7 +329,7 @@ SENSORS = [
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
-        icon="mdi:transmission-tower-import",
+        icon="mdi:transmission-tower-export",
         value_fn=lambda stromligning: stromligning.get_transmission_tariff(
             tariff="systemTariff", vat=False
         ),
@@ -343,7 +343,7 @@ SENSORS = [
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
-        icon="mdi:transmission-tower-import",
+        icon="mdi:transmission-tower-export",
         value_fn=lambda stromligning: stromligning.get_transmission_tariff(
             tariff="netTariff", vat=True
         ),
@@ -357,7 +357,7 @@ SENSORS = [
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
-        icon="mdi:transmission-tower-import",
+        icon="mdi:transmission-tower-export",
         value_fn=lambda stromligning: stromligning.get_transmission_tariff(
             tariff="netTariff", vat=False
         ),
@@ -371,7 +371,7 @@ SENSORS = [
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
-        icon="mdi:transmission-tower-import",
+        icon="mdi:transmission-tower-export",
         value_fn=lambda stromligning: stromligning.get_distribution(vat=True),
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
@@ -383,7 +383,7 @@ SENSORS = [
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
-        icon="mdi:transmission-tower-import",
+        icon="mdi:transmission-tower-export",
         value_fn=lambda stromligning: stromligning.get_distribution(
             tariff="netTariff", vat=False
         ),
