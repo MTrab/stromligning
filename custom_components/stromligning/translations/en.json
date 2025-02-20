@@ -73,8 +73,14 @@
             "surcharge_vat": {
                 "name": "Spotprice surcharge incl. VAT"
             },
-            "provider_ex_vat": {
+            "surcharge_ex_vat": {
                 "name": "Spotprice surcharge excl. VAT"
+            },
+            "systemtariff_vat": {
+                "name": "Systemtariff incl. moms"
+            },
+            "systemtariff_ex_vat": {
+                "name": "Systemtariff excl. moms"
             },
             "today_min_vat": {
                 "name": "Minimum price rest of the day incl. VAT",
