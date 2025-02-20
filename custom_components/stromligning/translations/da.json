@@ -64,6 +64,12 @@
             "net_owner": {
                 "name": "Elnet operatør"
             },
+            "nettariff_vat": {
+                "name": "Nettariff inkl. moms"
+            },
+            "nettariff_ex_vat": {
+                "name": "Nettariff ekskl. moms"
+            },
             "next_data_refresh": {
                 "name": "Næste data opdatering"
             },

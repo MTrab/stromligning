@@ -64,6 +64,12 @@
             "net_owner": {
                 "name": "Net operator"
             },
+            "nettariff_vat": {
+                "name": "Nettariff incl. VAT"
+            },
+            "nettariff_ex_vat": {
+                "name": "Systemtariff excl. VAT"
+            },
             "next_data_refresh": {
                 "name": "Next data update"
             },
@@ -77,10 +83,10 @@
                 "name": "Spotprice surcharge excl. VAT"
             },
             "systemtariff_vat": {
-                "name": "Systemtariff incl. moms"
+                "name": "Systemtariff incl. VAT"
             },
             "systemtariff_ex_vat": {
-                "name": "Systemtariff excl. moms"
+                "name": "Systemtariff excl. VAT"
             },
             "today_min_vat": {
                 "name": "Minimum price rest of the day incl. VAT",
