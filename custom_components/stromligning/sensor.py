@@ -372,9 +372,7 @@ SENSORS = [
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
         icon="mdi:transmission-tower-import",
-        value_fn=lambda stromligning: stromligning.get_distribution(
-            vat=True
-        ),
+        value_fn=lambda stromligning: stromligning.get_distribution(vat=True),
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="distribution_vat",
@@ -492,6 +490,32 @@ class StromligningSensor(SensorEntity):
                         "start": price["date"],
                         "end": price["date"] + timedelta(hours=1),
                         "price": price["price"]["value"],
+                    }
+                )
+
+            self._attr_extra_state_attributes.update({"prices": price_set})
+        elif self.entity_description.key == "distribution_vat":
+            self._attr_extra_state_attributes = {}
+            price_set: list = []
+            for price in self.api.prices_today:
+                price_set.append(
+                    {
+                        "start": price["date"],
+                        "end": price["date"] + timedelta(hours=1),
+                        "price": price["details"]["distribution"]["total"],
+                    }
+                )
+
+            self._attr_extra_state_attributes.update({"prices": price_set})
+        elif self.entity_description.key == "distribution_ex_vat":
+            self._attr_extra_state_attributes = {}
+            price_set: list = []
+            for price in self.api.prices_today:
+                price_set.append(
+                    {
+                        "start": price["date"],
+                        "end": price["date"] + timedelta(hours=1),
+                        "price": price["details"]["distribution"]["value"],
                     }
                 )
 
