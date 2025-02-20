@@ -73,8 +73,14 @@
             "surcharge_vat": {
                 "name": "Tillæg til spotpris inkl. moms"
             },
-            "provider_ex_vat": {
+            "surcharge_ex_vat": {
                 "name": "Tillæg til spotpris ekskl. moms"
+            },
+            "systemtariff_vat": {
+                "name": "Systemtariff inkl. moms"
+            },
+            "systemtariff_ex_vat": {
+                "name": "Systemtariff ekskl. moms"
             },
             "today_min_vat": {
                 "name": "Minimum pris resten af dagen inkl. moms",

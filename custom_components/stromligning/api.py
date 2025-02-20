@@ -265,7 +265,7 @@ class StromligningAPI:
         """Get power provider."""
         return self._data.company["name"]
 
-    def get_surcharge(self, vat: bool=True) -> float:
+    def get_surcharge(self, vat: bool = True) -> float:
         """Get surcharge from API."""
         for price in self.prices_today:
             if price["date"].hour == dt_utils.now().hour:
@@ -281,4 +281,23 @@ class StromligningAPI:
                     price["details"]["surcharge"]["total"]
                     if vat
                     else price["details"]["surcharge"]["value"]
+                )
+
+    def get_get_transmission_tariff(self, tariff: str, vat: bool = True) -> float:
+        """Get transmission tariff from API."""
+        for price in self.prices_today:
+            if price["date"].hour == dt_utils.now().hour:
+                LOGGER.debug(
+                    "Returning '%s' as current %s tariff",
+                    (
+                        price["details"]["transmission"][tariff]["total"]
+                        if vat
+                        else price["details"]["transmission"][tariff]["value"]
+                    ),
+                    tariff,
+                )
+                return (
+                    price["details"]["transmission"][tariff]["total"]
+                    if vat
+                    else price["details"]["transmission"][tariff]["value"]
                 )

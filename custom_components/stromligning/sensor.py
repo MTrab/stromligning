@@ -310,6 +310,34 @@ SENSORS = [
         translation_key="surcharge_ex_vat",
         unit_of_measurement="kr/kWh",
     ),
+    StromligningSensorEntityDescription(
+        key="systemtariff_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_get_transmission_tariff(
+            tariff="systemTariff", vat=True
+        ),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="systemtariff_vat",
+        unit_of_measurement="kr/kWh",
+    ),
+    StromligningSensorEntityDescription(
+        key="systemtariff_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_get_transmission_tariff(
+            tariff="systemTariff", vat=False
+        ),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="systemtariff_ex_vat",
+        unit_of_measurement="kr/kWh",
+    ),
 ]
 
 
