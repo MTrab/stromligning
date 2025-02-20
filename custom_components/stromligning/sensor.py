@@ -288,6 +288,28 @@ SENSORS = [
         entity_registry_enabled_default=False,
         translation_key="provider",
     ),
+    StromligningSensorEntityDescription(
+        key="surcharge_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_surcharge(vat=True),
+        entity_registry_enabled_default=True,
+        translation_key="surcharge_vat",
+        unit_of_measurement="kr/kWh",
+    ),
+    StromligningSensorEntityDescription(
+        key="surcharge_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_surcharge(vat=False),
+        entity_registry_enabled_default=True,
+        translation_key="surcharge_ex_vat",
+        unit_of_measurement="kr/kWh",
+    ),
 ]
 
 
@@ -377,7 +399,7 @@ class StromligningSensor(SensorEntity):
                 )
 
             self._attr_extra_state_attributes.update({"prices": price_set})
-        if self.entity_description.key == "current_price_ex_vat":
+        elif self.entity_description.key == "current_price_ex_vat":
             self._attr_extra_state_attributes = {}
             price_set: list = []
             for price in self.api.prices_today:

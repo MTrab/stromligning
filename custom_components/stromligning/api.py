@@ -264,3 +264,21 @@ class StromligningAPI:
     def get_power_provider(self) -> str:
         """Get power provider."""
         return self._data.company["name"]
+
+    def get_surcharge(self, vat: bool=True) -> float:
+        """Get surcharge from API."""
+        for price in self.prices_today:
+            if price["date"].hour == dt_utils.now().hour:
+                LOGGER.debug(
+                    "Returning '%s' as current surcharge",
+                    (
+                        price["details"]["surcharge"]["total"]
+                        if vat
+                        else price["details"]["surcharge"]["value"]
+                    ),
+                )
+                return (
+                    price["details"]["surcharge"]["total"]
+                    if vat
+                    else price["details"]["surcharge"]["value"]
+                )

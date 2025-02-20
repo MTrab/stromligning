@@ -70,6 +70,12 @@
             "provider": {
                 "name": "Provider agreement"
             },
+            "surcharge_vat": {
+                "name": "Spotprice surcharge incl. VAT"
+            },
+            "provider_ex_vat": {
+                "name": "Spotprice surcharge excl. VAT"
+            },
             "today_min_vat": {
                 "name": "Minimum price rest of the day incl. VAT",
                 "state_attributes": {

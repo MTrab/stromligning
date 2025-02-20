@@ -70,6 +70,12 @@
             "provider": {
                 "name": "El aftale"
             },
+            "surcharge_vat": {
+                "name": "Tillæg til spotpris inkl. moms"
+            },
+            "provider_ex_vat": {
+                "name": "Tillæg til spotpris ekskl. moms"
+            },
             "today_min_vat": {
                 "name": "Minimum pris resten af dagen inkl. moms",
                 "state_attributes": {
