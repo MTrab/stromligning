@@ -115,7 +115,7 @@ class StromligningAPI:
                 self.prices_tomorrow.append(price)
 
         LOGGER.debug("Found %s entries for tomorrow", len(self.prices_tomorrow))
-        if len(self.prices_tomorrow) == 24:
+        if len(self.prices_tomorrow) >= 23 and len(self.prices_tomorrow) <= 25:
             LOGGER.debug("Prices for tomorrow are valid")
             self.tomorrow_available = True
         else:
