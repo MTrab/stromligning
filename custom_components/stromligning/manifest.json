@@ -14,5 +14,5 @@
     "requirements": [
         "pystromligning==0.1.2"
     ],
-    "version": "0.2.4"
+    "version": "0.2.5"
 }
