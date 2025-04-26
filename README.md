@@ -19,11 +19,11 @@ The integration automatically recognises tariff settings from the Home Assistant
 
 ## Installation:
 
-### ~~Option 1 (easy) - HACS:~~
+### Option 1 (easy) - HACS:
 
-*   ~~Ensure that HACS is installed.~~
-*   ~~Search for and install the "Stromligning" integration.~~
-*   ~~Restart Home Assistant.~~
+*   Ensure that HACS is installed.
+*   Search for and install the "Stromligning" integration.
+*   Restart Home Assistant.
 
 ### Option 2 - Add custom repository to HACS:
 
