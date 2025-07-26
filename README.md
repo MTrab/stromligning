@@ -55,7 +55,7 @@ Copy the `custom_templates/FindCheapestPrice.jinja` to the `custom_templates` di
 Reload Home Assistant and use the Jinja template by inserting the example below in a template sensor helper
 
 ```
-{% from 'FindCheapestPeriod.jinja' import FindCheapestPeriod%}
+{% from 'FindCheapestPrice.jinja' import FindCheapestPeriod%}
 {% set earliestStartTime = now() %}
 {% set latestStartTime = now() + timedelta(days=2) %}
 {% set periodLength = timedelta(hours=3) %}
