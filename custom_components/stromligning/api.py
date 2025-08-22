@@ -127,17 +127,32 @@ class StromligningAPI:
     def get_current(self, vat: bool = True) -> str:
         """Get the current price"""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour:
+            if price["date"].hour == dt_utils.now().hour and (
+                len(self.prices_today) == 24
+                or (
+                    price["date"].minute <= dt_utils.now().minute
+                    and (price["date"] + timedelta(minutes=15)).minute
+                    > dt_utils.now().minute
+                )
+            ):
                 LOGGER.debug(
                     "Returning '%s' as current price",
                     (price["price"]["total"] if vat else price["price"]["value"]),
                 )
                 return price["price"]["total"] if vat else price["price"]["value"]
+            LOGGER.debug(self.prices_today.count)
 
     def get_spot(self, vat: bool = True) -> str:
         """Get spotprice"""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour:
+            if price["date"].hour == dt_utils.now().hour and (
+                len(self.prices_today) == 24
+                or (
+                    price["date"].minute <= dt_utils.now().minute
+                    and (price["date"] + timedelta(minutes=15)).minute
+                    > dt_utils.now().minute
+                )
+            ):
                 LOGGER.debug(
                     "Returning '%s' as current spotprice",
                     (
@@ -155,7 +170,14 @@ class StromligningAPI:
     def get_electricitytax(self, vat: bool = True) -> str:
         """Get electricity tax"""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour:
+            if price["date"].hour == dt_utils.now().hour and (
+                len(self.prices_today) == 24
+                or (
+                    price["date"].minute <= dt_utils.now().minute
+                    and (price["date"] + timedelta(minutes=15)).minute
+                    > dt_utils.now().minute
+                )
+            ):
                 LOGGER.debug(
                     "Returning '%s' as current electricity tax",
                     (
@@ -268,7 +290,14 @@ class StromligningAPI:
     def get_surcharge(self, vat: bool = True) -> float:
         """Get surcharge from API."""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour:
+            if price["date"].hour == dt_utils.now().hour and (
+                len(self.prices_today) == 24
+                or (
+                    price["date"].minute <= dt_utils.now().minute
+                    and (price["date"] + timedelta(minutes=15)).minute
+                    > dt_utils.now().minute
+                )
+            ):
                 LOGGER.debug(
                     "Returning '%s' as current surcharge",
                     (
@@ -286,7 +315,14 @@ class StromligningAPI:
     def get_transmission_tariff(self, tariff: str, vat: bool = True) -> float:
         """Get transmission tariff from API."""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour:
+            if price["date"].hour == dt_utils.now().hour and (
+                len(self.prices_today) == 24
+                or (
+                    price["date"].minute <= dt_utils.now().minute
+                    and (price["date"] + timedelta(minutes=15)).minute
+                    > dt_utils.now().minute
+                )
+            ):
                 LOGGER.debug(
                     "Returning '%s' as current %s tariff",
                     (
@@ -305,7 +341,14 @@ class StromligningAPI:
     def get_distribution(self, vat: bool = True) -> float:
         """Get distribution from API."""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour:
+            if price["date"].hour == dt_utils.now().hour and (
+                len(self.prices_today) == 24
+                or (
+                    price["date"].minute <= dt_utils.now().minute
+                    and (price["date"] + timedelta(minutes=15)).minute
+                    > dt_utils.now().minute
+                )
+            ):
                 LOGGER.debug(
                     "Returning '%s' as current distribution value",
                     (
