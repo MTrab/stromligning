@@ -209,55 +209,61 @@ class StromligningAPI:
         full_day: bool = False,
         date: bool = False,
         vat: bool = True,
-    ) -> str | datetime:
+    ) -> str | float | datetime | None:
         """Get today specific price and time."""
         res = None
 
-        if not full_day:
-            dataset: list = []
-            for price in self.prices_today:
-                if price["date"] >= dt_utils.now():
-                    dataset.append(price)
-        else:
-            dataset = self.prices_today
+        try:
+            if not full_day:
+                dataset: list = []
+                for price in self.prices_today:
+                    if price["date"] >= dt_utils.now():
+                        dataset.append(price)
+            else:
+                dataset = self.prices_today
 
-        if option_type.lower() == "min":
-            res = min(dataset, key=lambda k: k["price"]["value"])
-        elif option_type.lower() == "max":
-            res = max(dataset, key=lambda k: k["price"]["value"])
-        elif option_type.lower() == "mean":
-            return self.mean(dataset, vat)
+            if option_type.lower() == "min":
+                res = min(dataset, key=lambda k: k["price"]["value"])
+            elif option_type.lower() == "max":
+                res = max(dataset, key=lambda k: k["price"]["value"])
+            elif option_type.lower() == "mean":
+                return self.mean(dataset, vat)
 
-        ret = {
-            "date": res["date"].strftime("%H:%M:%S"),
-            "price": (res["price"]["total"] if vat else res["price"]["value"]),
-        }
+            ret = {
+                "date": res["date"].strftime("%H:%M:%S"),
+                "price": (res["price"]["total"] if vat else res["price"]["value"]),
+            }
 
-        return ret["date"] if date else ret["price"]
+            return ret["date"] if date else ret["price"]
+        except ValueError:
+            return None
 
     def get_specific_tomorrow(
         self, option_type: str, date: bool = False, vat: bool = True
-    ) -> str | datetime:
+    ) -> str | float | datetime | None:
         """Get tomorrow specific price and time."""
-        if not self.tomorrow_available:
+        try:
+            if not self.tomorrow_available:
+                return None
+
+            dataset = self.prices_tomorrow
+            res = None
+
+            if option_type.lower() == "min":
+                res = min(dataset, key=lambda k: k["price"]["value"])
+            elif option_type.lower() == "max":
+                res = max(dataset, key=lambda k: k["price"]["value"])
+            elif option_type.lower() == "mean":
+                return self.mean(dataset, vat)
+
+            ret = {
+                "date": res["date"].strftime("%H:%M:%S"),
+                "price": (res["price"]["total"] if vat else res["price"]["value"]),
+            }
+
+            return ret["date"] if date else ret["price"]
+        except ValueError:
             return None
-
-        dataset = self.prices_tomorrow
-        res = None
-
-        if option_type.lower() == "min":
-            res = min(dataset, key=lambda k: k["price"]["value"])
-        elif option_type.lower() == "max":
-            res = max(dataset, key=lambda k: k["price"]["value"])
-        elif option_type.lower() == "mean":
-            return self.mean(dataset, vat)
-
-        ret = {
-            "date": res["date"].strftime("%H:%M:%S"),
-            "price": (res["price"]["total"] if vat else res["price"]["value"]),
-        }
-
-        return ret["date"] if date else ret["price"]
 
     def get_next_update(self) -> datetime:
         """Get next API update timestamp."""
