@@ -68,7 +68,7 @@
                 "name": "Nettariff incl. VAT"
             },
             "nettariff_ex_vat": {
-                "name": "Systemtariff excl. VAT"
+                "name": "Nettariff excl. VAT"
             },
             "next_data_refresh": {
                 "name": "Next data update"
