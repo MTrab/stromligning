@@ -80,24 +80,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             second=rand_sec,
         )
 
-        update_new_hour = async_track_time_change(hass, new_quarter, minute=0, second=1)
-        update_new_hour_15 = async_track_time_change(
-            hass, new_quarter, minute=15, second=1
-        )
-        update_new_hour_30 = async_track_time_change(
-            hass, new_quarter, minute=30, second=1
-        )
-        update_new_hour_45 = async_track_time_change(
-            hass, new_quarter, minute=45, second=1
+        update_new_quarter = async_track_time_change(
+            hass, new_quarter, minute="/15", second=1
         )
         update_new_day = async_track_time_change(
             hass, new_day, hour=0, minute=0, second=1
         )
 
-        api.listeners.append(update_new_hour)
-        api.listeners.append(update_new_hour_15)
-        api.listeners.append(update_new_hour_30)
-        api.listeners.append(update_new_hour_45)
+        api.listeners.append(update_new_quarter)
         api.listeners.append(update_new_day)
         api.listeners.append(update_tomorrow)
 
