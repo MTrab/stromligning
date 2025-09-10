@@ -12,7 +12,7 @@
     "iot_class": "cloud_polling",
     "issue_tracker": "https://github.com/MTrab/stromligning/issues",
     "requirements": [
-        "pystromligning==0.1.2"
+        "pystromligning@git+https://github.com/mtrab/pystromligning@Update-API-requests"
     ],
     "version": "0.2.7"
 }

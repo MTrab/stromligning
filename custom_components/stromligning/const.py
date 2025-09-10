@@ -12,10 +12,10 @@ https://github.com/mtrab/stromligning/issues
 -------------------------------------------------------------------
 """
 
+CONF_AGGREGATION = "aggregation"
 CONF_COMPANY = "company"
 CONF_DEFAULT_NAME = "Strømligning"
-CONF_TEMPLATE = "extra_cost_template"
-CONF_USE_VAT = "vat"
+CONF_FORECASTS = "forecasts"
 
 DEFAULT_TEMPLATE = "{{0.0|float(0)}}"
 DOMAIN = "stromligning"

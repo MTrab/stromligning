@@ -8,11 +8,17 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_call_later
-from pystromligning import Stromligning
+from pystromligning import Aggregation, Stromligning
 from pystromligning.exceptions import TooManyRequests
 
 from . import async_setup_entry, async_unload_entry
-from .const import CONF_COMPANY, CONF_DEFAULT_NAME, CONF_TEMPLATE, CONF_USE_VAT, DOMAIN
+from .const import (
+    CONF_AGGREGATION,
+    CONF_COMPANY,
+    CONF_DEFAULT_NAME,
+    CONF_FORECASTS,
+    DOMAIN,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -129,6 +135,8 @@ class StromligningConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_NAME, default=CONF_DEFAULT_NAME): str,
                 vol.Required(CONF_COMPANY): vol.In(company_list),
+                vol.Required(CONF_AGGREGATION): vol.In(Aggregation.values()),
+                vol.Required(CONF_FORECASTS, default=False): bool,
             }
         )
 
