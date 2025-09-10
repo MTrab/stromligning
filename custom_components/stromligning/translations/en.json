@@ -21,17 +21,20 @@
     },
     "options": {
         "abort": {
-            "already_configured": "[%key:component::hue::config::abort::already_configured%]"
+            "already_configured": "Integration with same name already existing"
         },
         "error": {
-            "too_many_requests": "[%key:component::hue::config::abort::too_many_requests%]"
+            "too_many_requests": "Too many requests to the API - try again in 15 minutes"
         },
         "step": {
-            "init": {
+            "user": {
                 "data": {
-                    "company": "[%key:component::hue::config::step::user::data::company%]",
-                    "aggregation": "[%key:component::hue::config::step::user::data::aggregation%]",
-                    "forecasts": "[%key:component::hue::config::step::user::data::forecasts%]"
+                    "name": "Name for this integration",
+                    "company": "Electricity provider",
+                    "aggregation": "Resolution of prices",
+                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
+                    "15m": "15 minutes",
+                    "1h": "Hourly"
                 }
             }
         }
