@@ -32,7 +32,7 @@ class StromligningAPI:
 
         self.hass = hass
 
-        self._data = Stromligning()
+        self._data = Stromligning(False)
 
         self.prices_today: list = []
         self.prices_tomorrow: list = []
@@ -161,26 +161,6 @@ class StromligningAPI:
         for price in self.prices_today:
             if not price["date"].hour == dt_utils.now().hour:
                 continue
-
-            LOGGER.debug(
-                "Checking price with hour %s and minute %s against %s = %s",
-                price["date"].hour,
-                price["date"].minute,
-                dt_utils.now(),
-                price["date"].minute <= dt_utils.now().minute
-                and (
-                    (price["date"] + timedelta(minutes=15)).minute
-                    > dt_utils.now().minute
-                    or (price["date"] + timedelta(minutes=15)).minute == 0
-                ),
-            )
-            LOGGER.debug(
-                "%s <= %s and %s > %s",
-                price["date"].minute,
-                dt_utils.now().minute,
-                (price["date"] + timedelta(minutes=15)).minute,
-                dt_utils.now().minute,
-            )
 
             if (
                 price["date"].hour == dt_utils.now().hour
