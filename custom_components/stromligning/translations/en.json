@@ -12,9 +12,7 @@
                     "name": "Name for this integration",
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
-                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
-                    "15m": "15 minutes",
-                    "1h": "Hourly"
+                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)"
                 }
             }
         }
@@ -27,15 +25,20 @@
             "too_many_requests": "Too many requests to the API - try again in 15 minutes"
         },
         "step": {
-            "user": {
+            "init": {
                 "data": {
-                    "name": "Name for this integration",
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
-                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
-                    "15m": "15 minutes",
-                    "1h": "Hourly"
+                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)"
                 }
+            }
+        }
+    },
+    "selector": {
+        "aggregation": {
+            "options": {
+                "15m": "15 minutes",
+                "1h": "Hourly"
             }
         }
     },
@@ -68,6 +71,22 @@
             },
             "electricity_tax_ex_vat": {
                 "name": "Electricity tax excl. VAT"
+            },
+            "forecasts_vat": {
+                "name": "Price forecasts incl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Prices next week"
+                    }
+                }
+            },
+            "forecasts_ex_vat": {
+                "name": "Price forecasts excl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Prices next week"
+                    }
+                }
             },
             "net_owner": {
                 "name": "Net operator"

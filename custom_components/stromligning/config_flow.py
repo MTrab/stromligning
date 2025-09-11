@@ -60,7 +60,7 @@ class StromligningOptionsFlow(config_entries.OptionsFlow):
 
         LOGGER.debug("Showing options form")
 
-        selected_company: str = None
+        selected_company: str | None = None
         company_list: list = []
         for company in api.available_companies:
             if company["id"] == self.config_entry.options[CONF_COMPANY]:
@@ -76,6 +76,14 @@ class StromligningOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_COMPANY, default=selected_company): vol.In(
                     company_list
                 ),
+                vol.Required(
+                    CONF_AGGREGATION,
+                    default=self.config_entry.options.get(CONF_AGGREGATION, "1h"),
+                ): vol.In(Aggregation.values()),
+                vol.Required(
+                    CONF_FORECASTS,
+                    default=self.config_entry.options.get(CONF_FORECASTS, False),
+                ): bool,
             }
         )
 

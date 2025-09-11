@@ -8,10 +8,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.event import (
+    async_track_time_change,
+    async_track_utc_time_change,
+)
 from homeassistant.loader import async_get_integration
 from homeassistant.util import slugify as util_slugify
-from pystromligning.exceptions import TooManyRequests
+from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
 from .const import DOMAIN, PLATFORMS, STARTUP, UPDATE_SIGNAL
@@ -80,6 +83,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             second=rand_sec,
         )
 
+        update_forecast = async_track_utc_time_change(
+            hass, get_new_data, hour="/6", minute=10  # UTC time!!
+        )
+
         update_new_quarter = async_track_time_change(
             hass, new_quarter, minute="/15", second=1
         )
@@ -90,6 +97,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         api.listeners.append(update_new_quarter)
         api.listeners.append(update_new_day)
         api.listeners.append(update_tomorrow)
+        api.listeners.append(update_forecast)
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -101,6 +109,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # )
 
         # return False
+    except InvalidAPIResponse as ex:
+        LOGGER.error("Unable to connect to the Stromligning API: %s", ex)
+        raise ConfigEntryNotReady from ex
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

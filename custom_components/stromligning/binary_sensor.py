@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from homeassistant.components import binary_sensor
-from homeassistant.components.binary_sensor import (
-    BinarySensorEntity,
-)
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.util import dt as dt_utils
 from homeassistant.util import slugify as util_slugify
 from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
@@ -74,7 +73,7 @@ class StromligningBinarySensor(BinarySensorEntity):
         """Initialize a Stromligning Binary_Sensor."""
         super().__init__()
 
-        self.entity_description = description
+        self.entity_description: StromligningBinarySensorEntityDescription = description
         self._config = entry
         self._hass = hass
         self.api: StromligningAPI = hass.data[DOMAIN][entry.entry_id]
@@ -110,39 +109,76 @@ class StromligningBinarySensor(BinarySensorEntity):
                 {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
             )
             price_set: list = []
+            pset = {}
             for price in self.api.prices_tomorrow:
-                price_set.append(
+                if "start" in pset:
+                    pset.update({"end": price["date"]})
+                    price_set.append(pset)
+                    pset = {}
+
+                pset.update(
                     {
-                        "start": price["date"],
-                        "end": price["date"] + timedelta(hours=1),
                         "price": price["price"]["total"],
+                        "start": price["date"],
                     }
                 )
+            pset.update(
+                {
+                    "end": (
+                        dt_utils.as_local(
+                            (dt_utils.now() + timedelta(days=1)).replace(
+                                hour=0, minute=0, second=0, microsecond=0
+                            )
+                        )
+                        .isoformat()
+                        .replace("+00:00", ".000Z")
+                    )
+                }
+            )
+            price_set.append(pset)
+            self._attr_extra_state_attributes.update({"prices": price_set})
 
-                self._attr_extra_state_attributes.update({"prices": price_set})
         elif self.entity_description.key == "tomorrow_available_ex_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
                 {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
             )
             price_set: list = []
+            pset = {}
             for price in self.api.prices_tomorrow:
-                price_set.append(
+                if "start" in pset:
+                    pset.update({"end": price["date"]})
+                    price_set.append(pset)
+                    pset = {}
+
+                pset.update(
                     {
-                        "start": price["date"],
-                        "end": price["date"] + timedelta(hours=1),
                         "price": price["price"]["value"],
+                        "start": price["date"],
                     }
                 )
-
-                self._attr_extra_state_attributes.update({"prices": price_set})
+            pset.update(
+                {
+                    "end": (
+                        dt_utils.as_local(
+                            (dt_utils.now() + timedelta(days=1)).replace(
+                                hour=0, minute=0, second=0, microsecond=0
+                            )
+                        )
+                        .isoformat()
+                        .replace("+00:00", ".000Z")
+                    )
+                }
+            )
+            price_set.append(pset)
+            self._attr_extra_state_attributes.update({"prices": price_set})
 
     async def handle_update(self) -> None:
         """Handle data update."""
         try:
             self._attr_is_on = self.entity_description.value_fn(
                 self._hass.data[DOMAIN][self._config.entry_id]
-            )
+            ) # type: ignore
             LOGGER.debug(
                 "Setting value for '%s' to: %s",
                 self.entity_id,
