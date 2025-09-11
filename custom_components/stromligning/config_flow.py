@@ -28,7 +28,6 @@ class StromligningOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize Stromligning options flow."""
-        self.config_entry = config_entry
         self._errors = {}
 
     async def _do_update(
