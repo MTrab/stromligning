@@ -14,6 +14,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.loader import async_get_integration
 from homeassistant.util import slugify as util_slugify
+from pystromligning import Aggregation
 from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
@@ -32,6 +33,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     api = StromligningAPI(hass, entry, rand_min, rand_sec)
     hass.data[DOMAIN][entry.entry_id] = api
+
+    forecasts = entry.options.get("forecasts", False)
+    aggregation = entry.options.get("aggregation", Aggregation.HOUR)
 
     try:
         await api.set_location()
@@ -83,13 +87,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             second=rand_sec,
         )
 
-        update_forecast = async_track_utc_time_change(
-            hass, get_new_data, hour="/6", minute=10  # UTC time!!
-        )
+        if forecasts:
+            update_forecast = async_track_utc_time_change(
+                hass, get_new_data, hour="/6", minute=10  # UTC time!!
+            )
+            api.listeners.append(update_forecast)
 
-        update_new_quarter = async_track_time_change(
-            hass, new_quarter, minute="/15", second=1
-        )
+        if aggregation == Aggregation.MIN15:
+            update_new_quarter = async_track_time_change(
+                hass, new_quarter, minute="/15", second=1
+            )
+        else:
+            update_new_quarter = async_track_time_change(
+                hass, new_quarter, hour="/1", minute=0, second=1
+            )
+
         update_new_day = async_track_time_change(
             hass, new_day, hour=0, minute=0, second=1
         )
@@ -97,7 +109,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         api.listeners.append(update_new_quarter)
         api.listeners.append(update_new_day)
         api.listeners.append(update_tomorrow)
-        api.listeners.append(update_forecast)
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
