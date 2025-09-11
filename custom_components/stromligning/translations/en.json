@@ -10,7 +10,9 @@
             "user": {
                 "data": {
                     "name": "Name for this integration",
-                    "company": "Electricity provider"
+                    "company": "Electricity provider",
+                    "aggregation": "Resolution of prices",
+                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)"
                 }
             }
         }
@@ -25,9 +27,18 @@
         "step": {
             "init": {
                 "data": {
-                    "name": "Name for this integration",
-                    "company": "Electricity provider"
+                    "company": "Electricity provider",
+                    "aggregation": "Resolution of prices",
+                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)"
                 }
+            }
+        }
+    },
+    "selector": {
+        "aggregation": {
+            "options": {
+                "15m": "15 minutes",
+                "1h": "Hourly"
             }
         }
     },
@@ -60,6 +71,22 @@
             },
             "electricity_tax_ex_vat": {
                 "name": "Electricity tax excl. VAT"
+            },
+            "forecasts_vat": {
+                "name": "Price forecasts incl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Prices next week"
+                    }
+                }
+            },
+            "forecasts_ex_vat": {
+                "name": "Price forecasts excl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Prices next week"
+                    }
+                }
             },
             "net_owner": {
                 "name": "Net operator"

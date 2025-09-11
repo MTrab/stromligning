@@ -11,7 +11,7 @@ from homeassistant.util import slugify as util_slugify
 from pystromligning import Stromligning
 from pystromligning.exceptions import TooManyRequests
 
-from .const import CONF_COMPANY, UPDATE_SIGNAL_NEXT
+from .const import CONF_AGGREGATION, CONF_COMPANY, CONF_FORECASTS, UPDATE_SIGNAL_NEXT
 
 RETRY_MINUTES = 5
 MAX_RETRY_MINUTES = 60
@@ -41,6 +41,8 @@ class StromligningAPI:
 
         self.listeners = []
 
+        self.last_update: datetime | None = None
+
     async def set_location(self) -> None:
         """Set the location."""
         LOGGER.debug(
@@ -58,7 +60,19 @@ class StromligningAPI:
             "Setting company to %s",
             self._entry.options.get(CONF_COMPANY),
         )
-        self._data.set_company(self._entry.options.get(CONF_COMPANY))
+        self._data.set_company(str(self._entry.options.get(CONF_COMPANY)))
+
+        LOGGER.debug(
+            "Setting aggregation to %s",
+            self._entry.options.get(CONF_AGGREGATION, "1h"),
+        )
+        self._data.set_aggregation(self._entry.options.get(CONF_AGGREGATION, "1h"))
+
+        LOGGER.debug(
+            "Setting forecast to %s",
+            self._entry.options.get(CONF_FORECASTS, False),
+        )
+        self._data.set_forecast(self._entry.options.get(CONF_FORECASTS, False))
 
     async def update_prices(self) -> None:
         """Update the price object."""
@@ -73,6 +87,7 @@ class StromligningAPI:
             await self.hass.async_add_executor_job(
                 self._data.update, today_midnight_utc
             )
+            self.last_update = dt_utils.now()
         except TooManyRequests:
             LOGGER.info(
                 "You made too many requests to the API within a 15 minutes window - try again later"
@@ -100,8 +115,19 @@ class StromligningAPI:
             .replace("+00:00", ".000Z")
         )
 
+        day3_midnight_utc = (
+            dt_utils.as_utc(
+                (dt_utils.now() + timedelta(days=2)).replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+            )
+            .isoformat()
+            .replace("+00:00", ".000Z")
+        )
+
         self.prices_today = []
         self.prices_tomorrow = []
+        self.prices_forecasts = []
 
         for price in self._data.prices:
             if (
@@ -110,12 +136,18 @@ class StromligningAPI:
             ):
                 price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
                 self.prices_today.append(price)
-            elif price["date"] >= tomorrow_midnight_utc:
+            elif (
+                price["date"] >= tomorrow_midnight_utc
+                and price["date"] < day3_midnight_utc
+            ):
                 price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
                 self.prices_tomorrow.append(price)
+            else:
+                price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
+                self.prices_forecasts.append(price)
 
         LOGGER.debug("Found %s entries for tomorrow", len(self.prices_tomorrow))
-        if len(self.prices_tomorrow) >= 23 and len(self.prices_tomorrow) <= 25:
+        if len(self.prices_tomorrow) >= 23:
             LOGGER.debug("Prices for tomorrow are valid")
             self.tomorrow_available = True
         else:
@@ -124,15 +156,41 @@ class StromligningAPI:
             self.tomorrow_available = False
         async_dispatcher_send(self.hass, util_slugify(UPDATE_SIGNAL_NEXT))
 
-    def get_current(self, vat: bool = True) -> str:
+    def get_current(self, vat: bool = True) -> str | None:
         """Get the current price"""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour and (
-                len(self.prices_today) == 24
-                or (
-                    price["date"].minute <= dt_utils.now().minute
-                    and (price["date"] + timedelta(minutes=15)).minute
+            if not price["date"].hour == dt_utils.now().hour:
+                continue
+
+            LOGGER.debug(
+                "Checking price with hour %s and minute %s against %s = %s",
+                price["date"].hour,
+                price["date"].minute,
+                dt_utils.now(),
+                price["date"].minute <= dt_utils.now().minute
+                and (
+                    (price["date"] + timedelta(minutes=15)).minute
                     > dt_utils.now().minute
+                    or (price["date"] + timedelta(minutes=15)).minute == 0
+                ),
+            )
+            LOGGER.debug(
+                "%s <= %s and %s > %s",
+                price["date"].minute,
+                dt_utils.now().minute,
+                (price["date"] + timedelta(minutes=15)).minute,
+                dt_utils.now().minute,
+            )
+
+            if (
+                price["date"].hour == dt_utils.now().hour
+                and len(self.prices_today) == 24
+            ) or (
+                price["date"].minute <= dt_utils.now().minute
+                and (
+                    (price["date"] + timedelta(minutes=15)).minute
+                    > dt_utils.now().minute
+                    or (price["date"] + timedelta(minutes=15)).minute == 0
                 )
             ):
                 LOGGER.debug(
@@ -140,19 +198,30 @@ class StromligningAPI:
                     (price["price"]["total"] if vat else price["price"]["value"]),
                 )
                 return price["price"]["total"] if vat else price["price"]["value"]
-            LOGGER.debug(self.prices_today.count)
 
-    def get_spot(self, vat: bool = True) -> str:
+    def get_forecasts(self, vat: bool = True) -> datetime | None:
+        """Get forecasts"""
+
+        return self.last_update
+
+    def get_spot(self, vat: bool = True) -> str | None:
         """Get spotprice"""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour and (
-                len(self.prices_today) == 24
-                or (
-                    price["date"].minute <= dt_utils.now().minute
-                    and (price["date"] + timedelta(minutes=15)).minute
+            if not price["date"].hour == dt_utils.now().hour:
+                continue
+
+            if (
+                price["date"].hour == dt_utils.now().hour
+                and len(self.prices_today) == 24
+            ) or (
+                price["date"].minute <= dt_utils.now().minute
+                and (
+                    (price["date"] + timedelta(minutes=15)).minute
                     > dt_utils.now().minute
+                    or (price["date"] + timedelta(minutes=15)).minute == 0
                 )
             ):
+
                 LOGGER.debug(
                     "Returning '%s' as current spotprice",
                     (
@@ -167,17 +236,24 @@ class StromligningAPI:
                     else price["details"]["electricity"]["value"]
                 )
 
-    def get_electricitytax(self, vat: bool = True) -> str:
+    def get_electricitytax(self, vat: bool = True) -> str | None:
         """Get electricity tax"""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour and (
-                len(self.prices_today) == 24
-                or (
-                    price["date"].minute <= dt_utils.now().minute
-                    and (price["date"] + timedelta(minutes=15)).minute
+            if not price["date"].hour == dt_utils.now().hour:
+                continue
+
+            if (
+                price["date"].hour == dt_utils.now().hour
+                and len(self.prices_today) == 24
+            ) or (
+                price["date"].minute <= dt_utils.now().minute
+                and (
+                    (price["date"] + timedelta(minutes=15)).minute
                     > dt_utils.now().minute
+                    or (price["date"] + timedelta(minutes=15)).minute == 0
                 )
             ):
+
                 LOGGER.debug(
                     "Returning '%s' as current electricity tax",
                     (
@@ -211,7 +287,7 @@ class StromligningAPI:
         vat: bool = True,
     ) -> str | float | datetime | None:
         """Get today specific price and time."""
-        res = None
+        res = {}
 
         try:
             if not full_day:
@@ -247,7 +323,7 @@ class StromligningAPI:
                 return None
 
             dataset = self.prices_tomorrow
-            res = None
+            res = {}
 
             if option_type.lower() == "min":
                 res = min(dataset, key=lambda k: k["price"]["value"])
@@ -293,15 +369,21 @@ class StromligningAPI:
         """Get power provider."""
         return self._data.company["name"]
 
-    def get_surcharge(self, vat: bool = True) -> float:
+    def get_surcharge(self, vat: bool = True) -> float | None:
         """Get surcharge from API."""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour and (
-                len(self.prices_today) == 24
-                or (
-                    price["date"].minute <= dt_utils.now().minute
-                    and (price["date"] + timedelta(minutes=15)).minute
+            if not price["date"].hour == dt_utils.now().hour:
+                continue
+
+            if (
+                price["date"].hour == dt_utils.now().hour
+                and len(self.prices_today) == 24
+            ) or (
+                price["date"].minute <= dt_utils.now().minute
+                and (
+                    (price["date"] + timedelta(minutes=15)).minute
                     > dt_utils.now().minute
+                    or (price["date"] + timedelta(minutes=15)).minute == 0
                 )
             ):
                 LOGGER.debug(
@@ -318,15 +400,21 @@ class StromligningAPI:
                     else price["details"]["surcharge"]["value"]
                 )
 
-    def get_transmission_tariff(self, tariff: str, vat: bool = True) -> float:
+    def get_transmission_tariff(self, tariff: str, vat: bool = True) -> float | None:
         """Get transmission tariff from API."""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour and (
-                len(self.prices_today) == 24
-                or (
-                    price["date"].minute <= dt_utils.now().minute
-                    and (price["date"] + timedelta(minutes=15)).minute
+            if not price["date"].hour == dt_utils.now().hour:
+                continue
+
+            if (
+                price["date"].hour == dt_utils.now().hour
+                and len(self.prices_today) == 24
+            ) or (
+                price["date"].minute <= dt_utils.now().minute
+                and (
+                    (price["date"] + timedelta(minutes=15)).minute
                     > dt_utils.now().minute
+                    or (price["date"] + timedelta(minutes=15)).minute == 0
                 )
             ):
                 LOGGER.debug(
@@ -344,15 +432,21 @@ class StromligningAPI:
                     else price["details"]["transmission"][tariff]["value"]
                 )
 
-    def get_distribution(self, vat: bool = True) -> float:
+    def get_distribution(self, vat: bool = True) -> float | None:
         """Get distribution from API."""
         for price in self.prices_today:
-            if price["date"].hour == dt_utils.now().hour and (
-                len(self.prices_today) == 24
-                or (
-                    price["date"].minute <= dt_utils.now().minute
-                    and (price["date"] + timedelta(minutes=15)).minute
+            if not price["date"].hour == dt_utils.now().hour:
+                continue
+
+            if (
+                price["date"].hour == dt_utils.now().hour
+                and len(self.prices_today) == 24
+            ) or (
+                price["date"].minute <= dt_utils.now().minute
+                and (
+                    (price["date"] + timedelta(minutes=15)).minute
                     > dt_utils.now().minute
+                    or (price["date"] + timedelta(minutes=15)).minute == 0
                 )
             ):
                 LOGGER.debug(

@@ -10,7 +10,9 @@
             "user": {
                 "data": {
                     "name": "Navn til integrationen",
-                    "company": "El leverandør"
+                    "company": "El leverandør",
+                    "aggregation": "Opløsning på priser",
+                    "forecasts": "Inkluder pris udsigter for den næste uge? (kan være unøjagtige)"
                 }
             }
         }
@@ -25,9 +27,18 @@
         "step": {
             "init": {
                 "data": {
-                    "name": "Navn til integrationen",
-                    "company": "El leverandør"
+                    "company": "El leverandør",
+                    "aggregation": "Opløsning på priser",
+                    "forecasts": "Inkluder pris udsigter for den næste uge? (kan være unøjagtige)"
                 }
+            }
+        }
+    },
+    "selector": {
+        "aggregation": {
+            "options": {
+                "15m": "15 minutter",
+                "1h": "Time pris"
             }
         }
     },
@@ -60,6 +71,22 @@
             },
             "electricity_tax_ex_vat": {
                 "name": "Elafgift ekskl. moms"
+            },
+            "forecasts_vat": {
+                "name": "Pris udsigt inkl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Priser den næste uge"
+                    }
+                }
+            },
+            "forecasts_ex_vat": {
+                "name": "Pris udsigt ekskl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Priser den næste uge"
+                    }
+                }
             },
             "net_owner": {
                 "name": "Elnet operatør"

@@ -8,11 +8,17 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_call_later
-from pystromligning import Stromligning
+from pystromligning import Aggregation, Stromligning
 from pystromligning.exceptions import TooManyRequests
 
 from . import async_setup_entry, async_unload_entry
-from .const import CONF_COMPANY, CONF_DEFAULT_NAME, CONF_TEMPLATE, CONF_USE_VAT, DOMAIN
+from .const import (
+    CONF_AGGREGATION,
+    CONF_COMPANY,
+    CONF_DEFAULT_NAME,
+    CONF_FORECASTS,
+    DOMAIN,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,7 +60,7 @@ class StromligningOptionsFlow(config_entries.OptionsFlow):
 
         LOGGER.debug("Showing options form")
 
-        selected_company: str = None
+        selected_company: str | None = None
         company_list: list = []
         for company in api.available_companies:
             if company["id"] == self.config_entry.options[CONF_COMPANY]:
@@ -70,6 +76,14 @@ class StromligningOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_COMPANY, default=selected_company): vol.In(
                     company_list
                 ),
+                vol.Required(
+                    CONF_AGGREGATION,
+                    default=self.config_entry.options.get(CONF_AGGREGATION, "1h"),
+                ): vol.In(Aggregation.values()),
+                vol.Required(
+                    CONF_FORECASTS,
+                    default=self.config_entry.options.get(CONF_FORECASTS, False),
+                ): bool,
             }
         )
 
@@ -129,6 +143,8 @@ class StromligningConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_NAME, default=CONF_DEFAULT_NAME): str,
                 vol.Required(CONF_COMPANY): vol.In(company_list),
+                vol.Required(CONF_AGGREGATION): vol.In(Aggregation.values()),
+                vol.Required(CONF_FORECASTS, default=False): bool,
             }
         )
 
