@@ -518,19 +518,7 @@ class StromligningSensor(SensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update(
-                {
-                    "end": (
-                        dt_utils.as_local(
-                            datetime.fromisoformat(
-                                (dt_utils.now() + timedelta(days=1))
-                                .replace(hour=0, minute=0, second=0, microsecond=0)
-                                .isoformat()
-                            )
-                        )
-                    )
-                }
-            )
+            pset.update({"end": get_next_midnight()})
             price_set.append(pset)
 
             self._attr_extra_state_attributes.update({"prices": price_set})
@@ -550,19 +538,7 @@ class StromligningSensor(SensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update(
-                {
-                    "end": (
-                        dt_utils.as_local(
-                            datetime.fromisoformat(
-                                (dt_utils.now() + timedelta(days=1))
-                                .replace(hour=0, minute=0, second=0, microsecond=0)
-                                .isoformat()
-                            )
-                        )
-                    )
-                }
-            )
+            pset.update({"end": get_next_midnight()})
             price_set.append(pset)
 
             self._attr_extra_state_attributes.update({"prices": price_set})
@@ -582,19 +558,7 @@ class StromligningSensor(SensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update(
-                {
-                    "end": (
-                        dt_utils.as_local(
-                            datetime.fromisoformat(
-                                (dt_utils.now() + timedelta(days=1))
-                                .replace(hour=0, minute=0, second=0, microsecond=0)
-                                .isoformat()
-                            )
-                        )
-                    )
-                }
-            )
+            pset.update({"end": get_next_midnight()})
             price_set.append(pset)
 
             self._attr_extra_state_attributes.update({"prices": price_set})
@@ -661,19 +625,7 @@ class StromligningSensor(SensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update(
-                {
-                    "end": (
-                        dt_utils.as_local(
-                            datetime.fromisoformat(
-                                (dt_utils.now() + timedelta(days=1))
-                                .replace(hour=0, minute=0, second=0, microsecond=0)
-                                .isoformat()
-                            )
-                        )
-                    )
-                }
-            )
+            pset.update({"end": get_next_midnight()})
             price_set.append(pset)
 
             self._attr_extra_state_attributes.update({"prices": price_set})
