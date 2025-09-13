@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from homeassistant.components import binary_sensor
 from homeassistant.components.binary_sensor import BinarySensorEntity
@@ -126,12 +126,13 @@ class StromligningBinarySensor(BinarySensorEntity):
                 {
                     "end": (
                         dt_utils.as_local(
-                            (dt_utils.now() + timedelta(days=1)).replace(
-                                hour=0, minute=0, second=0, microsecond=0
+                            datetime.fromisoformat(
+								(dt_utils.now() + timedelta(days=1)).replace(
+									hour=0, minute=0, second=0, microsecond=0
+								)
+                                .isoformat()
                             )
                         )
-                        .isoformat()
-                        .replace("+00:00", ".000Z")
                     )
                 }
             )
@@ -161,12 +162,13 @@ class StromligningBinarySensor(BinarySensorEntity):
                 {
                     "end": (
                         dt_utils.as_local(
-                            (dt_utils.now() + timedelta(days=1)).replace(
-                                hour=0, minute=0, second=0, microsecond=0
+                            datetime.fromisoformat(
+								(dt_utils.now() + timedelta(days=1)).replace(
+									hour=0, minute=0, second=0, microsecond=0
+								)
+                                .isoformat()
                             )
                         )
-                        .isoformat()
-                        .replace("+00:00", ".000Z")
                     )
                 }
             )
