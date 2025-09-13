@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components import sensor
@@ -502,12 +502,13 @@ class StromligningSensor(SensorEntity):
                 {
                     "end": (
                         dt_utils.as_local(
-                            (dt_utils.now() + timedelta(days=1)).replace(
-                                hour=0, minute=0, second=0, microsecond=0
+                            datetime.fromisoformat(
+								(dt_utils.now() + timedelta(days=1)).replace(
+									hour=0, minute=0, second=0, microsecond=0
+								)
+                                .isoformat()
                             )
                         )
-                        .isoformat()
-                        .replace("+00:00", ".000Z")
                     )
                 }
             )
@@ -534,12 +535,13 @@ class StromligningSensor(SensorEntity):
                 {
                     "end": (
                         dt_utils.as_local(
-                            (dt_utils.now() + timedelta(days=1)).replace(
-                                hour=0, minute=0, second=0, microsecond=0
+                            datetime.fromisoformat(
+								(dt_utils.now() + timedelta(days=1)).replace(
+									hour=0, minute=0, second=0, microsecond=0
+								)
+                                .isoformat()
                             )
                         )
-                        .isoformat()
-                        .replace("+00:00", ".000Z")
                     )
                 }
             )
@@ -566,12 +568,13 @@ class StromligningSensor(SensorEntity):
                 {
                     "end": (
                         dt_utils.as_local(
-                            (dt_utils.now() + timedelta(days=1)).replace(
-                                hour=0, minute=0, second=0, microsecond=0
+                            datetime.fromisoformat(
+								(dt_utils.now() + timedelta(days=1)).replace(
+									hour=0, minute=0, second=0, microsecond=0
+								)
+                                .isoformat()
                             )
                         )
-                        .isoformat()
-                        .replace("+00:00", ".000Z")
                     )
                 }
             )
@@ -598,12 +601,13 @@ class StromligningSensor(SensorEntity):
                 {
                     "end": (
                         dt_utils.as_local(
-                            (dt_utils.now() + timedelta(days=1)).replace(
-                                hour=0, minute=0, second=0, microsecond=0
+                            datetime.fromisoformat(
+								(dt_utils.now() + timedelta(days=1)).replace(
+									hour=0, minute=0, second=0, microsecond=0
+								)
+                                .isoformat()
                             )
                         )
-                        .isoformat()
-                        .replace("+00:00", ".000Z")
                     )
                 }
             )
@@ -677,12 +681,13 @@ class StromligningSensor(SensorEntity):
                 {
                     "end": (
                         dt_utils.as_local(
-                            (price["date"] + timedelta(days=1)).replace(
-                                hour=0, minute=0, second=0, microsecond=0
+                            datetime.fromisoformat(
+								(dt_utils.now() + timedelta(days=1)).replace(
+									hour=0, minute=0, second=0, microsecond=0
+								)
+                                .isoformat()
                             )
                         )
-                        .isoformat()
-                        .replace("+00:00", ".000Z")
                     )
                 }
             )
