@@ -21,8 +21,8 @@ from homeassistant.util import slugify as util_slugify
 from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
-from .base import StromligningSensorEntityDescription
-from .const import CONF_FORECASTS, DEFAULT_TEMPLATE, DOMAIN, UPDATE_SIGNAL_NEXT
+from .base import StromligningSensorEntityDescription, get_next_midnight
+from .const import ATTR_PRICES, CONF_FORECASTS, DOMAIN, UPDATE_SIGNAL_NEXT
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="current_price_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="current_price_ex_vat",
@@ -49,7 +49,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="current_price_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="spotprice_vat",
@@ -61,7 +61,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="spotprice_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="spotprice_ex_vat",
@@ -73,7 +73,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="spotprice_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="electricity_tax_vat",
@@ -85,7 +85,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="electricity_tax_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="electricity_tax_ex_vat",
@@ -97,7 +97,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="electricity_tax_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="today_min_vat",
@@ -109,7 +109,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="today_min_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="today_min_ex_vat",
@@ -121,7 +121,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="today_min_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="today_max_vat",
@@ -133,7 +133,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="today_max_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="today_max_ex_vat",
@@ -145,7 +145,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="today_max_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="today_mean_vat",
@@ -157,7 +157,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="today_mean_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="today_mean_ex_vat",
@@ -171,7 +171,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="today_mean_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_min_vat",
@@ -185,7 +185,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="tomorrow_min_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_min_ex_vat",
@@ -199,7 +199,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="tomorrow_min_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_max_vat",
@@ -213,7 +213,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="tomorrow_max_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_max_ex_vat",
@@ -227,7 +227,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="tomorrow_max_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_mean_vat",
@@ -241,7 +241,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="tomorrow_mean_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="tomorrow_mean_ex_vat",
@@ -255,7 +255,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="tomorrow_mean_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="next_data_refresh",
@@ -297,7 +297,7 @@ SENSORS = [
         value_fn=lambda stromligning: stromligning.get_surcharge(vat=True),
         entity_registry_enabled_default=True,
         translation_key="surcharge_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="surcharge_ex_vat",
@@ -308,7 +308,7 @@ SENSORS = [
         value_fn=lambda stromligning: stromligning.get_surcharge(vat=False),
         entity_registry_enabled_default=False,
         translation_key="surcharge_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="systemtariff_vat",
@@ -322,7 +322,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="systemtariff_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="systemtariff_ex_vat",
@@ -336,7 +336,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="systemtariff_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="nettariff_vat",
@@ -350,7 +350,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="nettariff_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="nettariff_ex_vat",
@@ -364,7 +364,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="nettariff_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="distribution_vat",
@@ -376,7 +376,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=True,
         translation_key="distribution_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="distribution_ex_vat",
@@ -388,7 +388,7 @@ SENSORS = [
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         translation_key="distribution_ex_vat",
-        unit_of_measurement="kr/kWh", # type: ignore
+        unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
         key="forecasts_vat",
@@ -435,6 +435,8 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_devices):
 
 class StromligningSensor(SensorEntity):
     """Representation of a Stromligning Sensor."""
+
+    _unrecorded_attributes = frozenset({ATTR_PRICES})
 
     _attr_has_entity_name = True
     _attr_available = True
@@ -513,7 +515,7 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
         elif self.entity_description.key == "current_price_ex_vat":
             self._attr_extra_state_attributes = {}
             price_set: list = []
@@ -545,7 +547,7 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
         elif self.entity_description.key == "distribution_vat":
             self._attr_extra_state_attributes = {}
             price_set: list = []
@@ -577,7 +579,7 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
         elif self.entity_description.key == "distribution_ex_vat":
             self._attr_extra_state_attributes = {}
             price_set: list = []
@@ -609,7 +611,7 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
         elif self.entity_description.key == "today_min_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
@@ -688,12 +690,52 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
+
+        elif self.entity_description.key == "spotprice_vat":
+            self._attr_extra_state_attributes = {}
+            price_set: list = []
+            pset = {}
+            for price in self.api.prices_today:
+                if "start" in pset:
+                    pset.update({"end": price["date"]})
+                    price_set.append(pset)
+                    pset = {}
+
+                pset.update(
+                    {
+                        "price": price["details"]["electricity"]["total"],
+                        "start": price["date"],
+                    }
+                )
+            pset.update({"end": get_next_midnight()})
+            price_set.append(pset)
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
+
+        elif self.entity_description.key == "spotprice_ex_vat":
+            self._attr_extra_state_attributes = {}
+            price_set: list = []
+            pset = {}
+            for price in self.api.prices_today:
+                if "start" in pset:
+                    pset.update({"end": price["date"]})
+                    price_set.append(pset)
+                    pset = {}
+
+                pset.update(
+                    {
+                        "price": price["details"]["electricity"]["value"],
+                        "start": price["date"],
+                    }
+                )
+            pset.update({"end": get_next_midnight()})
+            price_set.append(pset)
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
     async def handle_update(self) -> None:
         """Handle data update."""
         try:
-            self._attr_native_value = self.entity_description.value_fn( # type: ignore
+            self._attr_native_value = self.entity_description.value_fn(  # type: ignore
                 self._hass.data[DOMAIN][self._config.entry_id]
             )
 
