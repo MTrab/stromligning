@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from homeassistant.components import binary_sensor
 from homeassistant.components.binary_sensor import BinarySensorEntity
