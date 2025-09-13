@@ -246,6 +246,36 @@
                         "name": "Priser for i morgen"
                     }
                 }
+            },
+            "spotprice_vat": {
+                "name": "Spotpriser for i morgen inkl. moms",
+                "state": {
+                    "on": "Klar",
+                    "off": "Endnu ikke klar"
+                },
+                "state_attributes": {
+                    "available_at": {
+                        "name": "Forventes klar"
+                    },
+                    "prices": {
+                        "name": "Spotpriser for i morgen"
+                    }
+                }
+            },
+            "spotprice_ex_vat": {
+                "name": "Spotpriser for i morgen ekskl. moms",
+                "state": {
+                    "on": "Klar",
+                    "off": "Endnu ikke klar"
+                },
+                "state_attributes": {
+                    "available_at": {
+                        "name": "Forventes klar"
+                    },
+                    "prices": {
+                        "name": "Spotpriser for i morgen"
+                    }
+                }
             }
         }
     }
