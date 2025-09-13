@@ -17,7 +17,7 @@ from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
 from .base import StromligningBinarySensorEntityDescription
-from .const import DOMAIN, UPDATE_SIGNAL
+from .const import ATTR_PRICES, DOMAIN, UPDATE_SIGNAL
 
 LOGGER = logging.getLogger(__name__)
 
@@ -60,6 +60,8 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_devices):
 
 class StromligningBinarySensor(BinarySensorEntity):
     """Representation of a Stromligning Binary_Sensor."""
+
+    _unrecorded_attributes = frozenset({ATTR_PRICES})
 
     _attr_has_entity_name = True
     _attr_available = True
@@ -136,7 +138,7 @@ class StromligningBinarySensor(BinarySensorEntity):
                 }
             )
             price_set.append(pset)
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
         elif self.entity_description.key == "tomorrow_available_ex_vat":
             self._attr_extra_state_attributes = {}
@@ -171,14 +173,14 @@ class StromligningBinarySensor(BinarySensorEntity):
                 }
             )
             price_set.append(pset)
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
     async def handle_update(self) -> None:
         """Handle data update."""
         try:
             self._attr_is_on = self.entity_description.value_fn(
                 self._hass.data[DOMAIN][self._config.entry_id]
-            ) # type: ignore
+            )  # type: ignore
             LOGGER.debug(
                 "Setting value for '%s' to: %s",
                 self.entity_id,
