@@ -16,7 +16,7 @@ from homeassistant.util import slugify as util_slugify
 from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
-from .base import StromligningBinarySensorEntityDescription
+from .base import StromligningBinarySensorEntityDescription, get_next_midnight
 from .const import DOMAIN, UPDATE_SIGNAL
 
 LOGGER = logging.getLogger(__name__)
@@ -122,20 +122,7 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update(
-                {
-                    "end": (
-                        dt_utils.as_local(
-                            datetime.fromisoformat(
-								(dt_utils.now() + timedelta(days=1)).replace(
-									hour=0, minute=0, second=0, microsecond=0
-								)
-                                .isoformat()
-                            )
-                        )
-                    )
-                }
-            )
+            pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({"prices": price_set})
 
@@ -160,16 +147,7 @@ class StromligningBinarySensor(BinarySensorEntity):
                 )
             pset.update(
                 {
-                    "end": (
-                        dt_utils.as_local(
-                            datetime.fromisoformat(
-								(dt_utils.now() + timedelta(days=1)).replace(
-									hour=0, minute=0, second=0, microsecond=0
-								)
-                                .isoformat()
-                            )
-                        )
-                    )
+                    "end": get_next_midnight()
                 }
             )
             price_set.append(pset)
@@ -180,7 +158,7 @@ class StromligningBinarySensor(BinarySensorEntity):
         try:
             self._attr_is_on = self.entity_description.value_fn(
                 self._hass.data[DOMAIN][self._config.entry_id]
-            ) # type: ignore
+            )  # type: ignore
             LOGGER.debug(
                 "Setting value for '%s' to: %s",
                 self.entity_id,

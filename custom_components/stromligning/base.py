@@ -2,10 +2,11 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from homeassistant.components.binary_sensor import BinarySensorEntityDescription
 from homeassistant.components.sensor import SensorEntityDescription
+from homeassistant.util import dt as dt_utils
 
 from .api import StromligningAPI
 from .const import UPDATE_SIGNAL
@@ -35,3 +36,15 @@ class StromligningBinarySensorEntityDescription(
     """Describes a Stromligning sensor."""
 
     unit_fn: Callable[[StromligningAPI], None] | None = None
+
+
+@staticmethod
+def get_next_midnight() -> datetime:
+    """Return a datetime for the next midnight."""
+    return dt_utils.as_local(
+        datetime.fromisoformat(
+            (dt_utils.now() + timedelta(days=1))
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+            .isoformat()
+        )
+    )
