@@ -125,13 +125,15 @@ class StromligningBinarySensor(BinarySensorEntity):
             pset.update(
                 {
                     "end": (
-                        dt_utils.as_local(
-                            (dt_utils.now() + timedelta(days=1)).replace(
-                                hour=0, minute=0, second=0, microsecond=0
+                        datetime.fromisoformat(
+                            dt_utils.as_local(
+                                (dt_utils.now() + timedelta(days=1)).replace(
+                                    hour=0, minute=0, second=0, microsecond=0
+                                )
                             )
+                            .isoformat()
+                            .replace("+00:00", ".000Z")
                         )
-                        .isoformat()
-                        .replace("+00:00", ".000Z")
                     )
                 }
             )
@@ -160,13 +162,15 @@ class StromligningBinarySensor(BinarySensorEntity):
             pset.update(
                 {
                     "end": (
-                        dt_utils.as_local(
-                            (dt_utils.now() + timedelta(days=1)).replace(
-                                hour=0, minute=0, second=0, microsecond=0
+                        datetime.fromisoformat(
+                            dt_utils.as_local(
+                                (dt_utils.now() + timedelta(days=1)).replace(
+                                    hour=0, minute=0, second=0, microsecond=0
+                                )
                             )
+                            .isoformat()
+                            .replace("+00:00", ".000Z")
                         )
-                        .isoformat()
-                        .replace("+00:00", ".000Z")
                     )
                 }
             )
