@@ -17,7 +17,7 @@ from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
 from .base import StromligningBinarySensorEntityDescription, get_next_midnight
-from .const import DOMAIN, UPDATE_SIGNAL
+from .const import ATTR_PRICES, DOMAIN, UPDATE_SIGNAL
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +40,24 @@ BINARY_SENSORS = [
         entity_registry_enabled_default=False,
         translation_key="tomorrow_available_ex_vat",
     ),
+    StromligningBinarySensorEntityDescription(
+        key="tomorrow_spotprice_vat",
+        entity_category=None,
+        device_class=None,
+        icon="mdi:transmission-tower-import",
+        value_fn=lambda stromligning: stromligning.tomorrow_available,
+        entity_registry_enabled_default=True,
+        translation_key="tomorrow_spotprice_vat",
+    ),
+    StromligningBinarySensorEntityDescription(
+        key="tomorrow_spotprice_ex_vat",
+        entity_category=None,
+        device_class=None,
+        icon="mdi:transmission-tower-import",
+        value_fn=lambda stromligning: stromligning.tomorrow_available,
+        entity_registry_enabled_default=False,
+        translation_key="tomorrow_spotprice_ex_vat",
+    ),
 ]
 
 
@@ -60,6 +78,8 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_devices):
 
 class StromligningBinarySensor(BinarySensorEntity):
     """Representation of a Stromligning Binary_Sensor."""
+
+    _unrecorded_attributes = frozenset({ATTR_PRICES})
 
     _attr_has_entity_name = True
     _attr_available = True
@@ -124,7 +144,7 @@ class StromligningBinarySensor(BinarySensorEntity):
                 )
             pset.update({"end": get_next_midnight()})
             price_set.append(pset)
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
         elif self.entity_description.key == "tomorrow_available_ex_vat":
             self._attr_extra_state_attributes = {}
@@ -151,7 +171,115 @@ class StromligningBinarySensor(BinarySensorEntity):
                 }
             )
             price_set.append(pset)
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
+
+        elif self.entity_description.key == "tomorrow_spotprice_vat":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+            )
+            price_set: list = []
+            pset = {}
+            for price in self.api.prices_tomorrow:
+                if "start" in pset:
+                    pset.update({"end": price["date"]})
+                    price_set.append(pset)
+                    pset = {}
+
+                pset.update(
+                    {
+                        "price": price["details"]["electricity"]["total"],
+                        "start": price["date"],
+                    }
+                )
+            pset.update(
+                {
+                    "end": get_next_midnight()
+                }
+            )
+            price_set.append(pset)
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
+
+        elif self.entity_description.key == "tomorrow_spotprice_ex_vat":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+            )
+            price_set: list = []
+            pset = {}
+            for price in self.api.prices_tomorrow:
+                if "start" in pset:
+                    pset.update({"end": price["date"]})
+                    price_set.append(pset)
+                    pset = {}
+
+                pset.update(
+                    {
+                        "price": price["details"]["electricity"]["value"],
+                        "start": price["date"],
+                    }
+                )
+            pset.update(
+                {
+                    "end": get_next_midnight()
+                }
+            )
+            price_set.append(pset)
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
+
+        elif self.entity_description.key == "tomorrow_spotprice_vat":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+            )
+            price_set: list = []
+            pset = {}
+            for price in self.api.prices_tomorrow:
+                if "start" in pset:
+                    pset.update({"end": price["date"]})
+                    price_set.append(pset)
+                    pset = {}
+
+                pset.update(
+                    {
+                        "price": price["details"]["electricity"]["total"],
+                        "start": price["date"],
+                    }
+                )
+            pset.update(
+                {
+                    "end": get_next_midnight()
+                }
+            )
+            price_set.append(pset)
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
+
+        elif self.entity_description.key == "tomorrow_spotprice_ex_vat":
+            self._attr_extra_state_attributes = {}
+            self._attr_extra_state_attributes.update(
+                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+            )
+            price_set: list = []
+            pset = {}
+            for price in self.api.prices_tomorrow:
+                if "start" in pset:
+                    pset.update({"end": price["date"]})
+                    price_set.append(pset)
+                    pset = {}
+
+                pset.update(
+                    {
+                        "price": price["details"]["electricity"]["value"],
+                        "start": price["date"],
+                    }
+                )
+            pset.update(
+                {
+                    "end": get_next_midnight()
+                }
+            )
+            price_set.append(pset)
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
     async def handle_update(self) -> None:
         """Handle data update."""

@@ -246,6 +246,36 @@
                         "name": "Prices tomorrow"
                     }
                 }
+            },
+            "tomorrow_spotprice_vat": {
+                "name": "Tomorrow spotprices incl. VAT",
+                "state": {
+                    "on": "Available",
+                    "off": "Not available yet"
+                },
+                "state_attributes": {
+                    "available_at": {
+                        "name": "Available at"
+                    },
+                    "prices": {
+                        "name": "Spotprices tomorrow"
+                    }
+                }
+            },
+            "tomorrow_spotprice_ex_vat": {
+                "name": "Tomorrow spotprices excl. VAT",
+                "state": {
+                    "on": "Available",
+                    "off": "Not available yet"
+                },
+                "state_attributes": {
+                    "available_at": {
+                        "name": "Available at"
+                    },
+                    "prices": {
+                        "name": "Spotprices tomorrow"
+                    }
+                }
             }
         }
     }
