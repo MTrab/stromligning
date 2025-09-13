@@ -40,6 +40,24 @@ BINARY_SENSORS = [
         entity_registry_enabled_default=False,
         translation_key="tomorrow_available_ex_vat",
     ),
+    StromligningBinarySensorEntityDescription(
+        key="tomorrow_spotprice_vat",
+        entity_category=None,
+        device_class=None,
+        icon="mdi:transmission-tower-import",
+        value_fn=lambda stromligning: stromligning.tomorrow_available,
+        entity_registry_enabled_default=True,
+        translation_key="tomorrow_spotprice_vat",
+    ),
+    StromligningBinarySensorEntityDescription(
+        key="tomorrow_spotprice_ex_vat",
+        entity_category=None,
+        device_class=None,
+        icon="mdi:transmission-tower-import",
+        value_fn=lambda stromligning: stromligning.tomorrow_available,
+        entity_registry_enabled_default=False,
+        translation_key="tomorrow_spotprice_ex_vat",
+    ),
 ]
 
 

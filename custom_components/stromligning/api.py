@@ -184,15 +184,16 @@ class StromligningAPI:
 
         return self.last_update
 
-    def get_spot(self, vat: bool = True) -> str | None:
+    def get_spot(self, vat: bool = True, tomorrow: bool = False) -> str | None:
         """Get spotprice"""
-        for price in self.prices_today:
+        for price in self.prices_today if not tomorrow else self.prices_tomorrow:
             if not price["date"].hour == dt_utils.now().hour:
                 continue
 
             if (
                 price["date"].hour == dt_utils.now().hour
-                and len(self.prices_today) == 24
+                and len(self.prices_today if not tomorrow else self.prices_tomorrow)
+                == 24
             ) or (
                 price["date"].minute <= dt_utils.now().minute
                 and (
