@@ -12,6 +12,8 @@ https://github.com/mtrab/stromligning/issues
 -------------------------------------------------------------------
 """
 
+ATTR_PRICES = "prices"
+
 CONF_AGGREGATION = "aggregation"
 CONF_COMPANY = "company"
 CONF_DEFAULT_NAME = "Strømligning"

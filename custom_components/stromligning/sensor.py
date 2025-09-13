@@ -22,7 +22,7 @@ from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
 from .base import StromligningSensorEntityDescription, get_next_midnight
-from .const import CONF_FORECASTS, DEFAULT_TEMPLATE, DOMAIN, UPDATE_SIGNAL_NEXT
+from .const import ATTR_PRICES, CONF_FORECASTS, DOMAIN, UPDATE_SIGNAL_NEXT
 
 LOGGER = logging.getLogger(__name__)
 
@@ -436,6 +436,8 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_devices):
 class StromligningSensor(SensorEntity):
     """Representation of a Stromligning Sensor."""
 
+    _unrecorded_attributes = frozenset({ATTR_PRICES})
+
     _attr_has_entity_name = True
     _attr_available = True
 
@@ -513,7 +515,7 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
         elif self.entity_description.key == "current_price_ex_vat":
             self._attr_extra_state_attributes = {}
             price_set: list = []
@@ -545,7 +547,7 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
         elif self.entity_description.key == "distribution_vat":
             self._attr_extra_state_attributes = {}
             price_set: list = []
@@ -577,7 +579,7 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
         elif self.entity_description.key == "distribution_ex_vat":
             self._attr_extra_state_attributes = {}
             price_set: list = []
@@ -609,7 +611,7 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
         elif self.entity_description.key == "today_min_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
@@ -688,7 +690,7 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
         elif self.entity_description.key == "spotprice_vat":
             self._attr_extra_state_attributes = {}
@@ -708,7 +710,7 @@ class StromligningSensor(SensorEntity):
                 )
             pset.update({"end": get_next_midnight()})
             price_set.append(pset)
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
         elif self.entity_description.key == "spotprice_ex_vat":
             self._attr_extra_state_attributes = {}
@@ -728,7 +730,7 @@ class StromligningSensor(SensorEntity):
                 )
             pset.update({"end": get_next_midnight()})
             price_set.append(pset)
-            self._attr_extra_state_attributes.update({"prices": price_set})
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
     async def handle_update(self) -> None:
         """Handle data update."""
