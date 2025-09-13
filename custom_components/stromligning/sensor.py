@@ -21,14 +21,8 @@ from homeassistant.util import slugify as util_slugify
 from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
-from .base import StromligningSensorEntityDescription
-from .const import (
-    ATTR_PRICES,
-    CONF_FORECASTS,
-    DEFAULT_TEMPLATE,
-    DOMAIN,
-    UPDATE_SIGNAL_NEXT,
-)
+from .base import StromligningSensorEntityDescription, get_next_midnight
+from .const import ATTR_PRICES, CONF_FORECASTS, DOMAIN, UPDATE_SIGNAL_NEXT
 
 LOGGER = logging.getLogger(__name__)
 
@@ -696,6 +690,46 @@ class StromligningSensor(SensorEntity):
             )
             price_set.append(pset)
 
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
+
+        elif self.entity_description.key == "spotprice_vat":
+            self._attr_extra_state_attributes = {}
+            price_set: list = []
+            pset = {}
+            for price in self.api.prices_today:
+                if "start" in pset:
+                    pset.update({"end": price["date"]})
+                    price_set.append(pset)
+                    pset = {}
+
+                pset.update(
+                    {
+                        "price": price["details"]["electricity"]["total"],
+                        "start": price["date"],
+                    }
+                )
+            pset.update({"end": get_next_midnight()})
+            price_set.append(pset)
+            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
+
+        elif self.entity_description.key == "spotprice_ex_vat":
+            self._attr_extra_state_attributes = {}
+            price_set: list = []
+            pset = {}
+            for price in self.api.prices_today:
+                if "start" in pset:
+                    pset.update({"end": price["date"]})
+                    price_set.append(pset)
+                    pset = {}
+
+                pset.update(
+                    {
+                        "price": price["details"]["electricity"]["value"],
+                        "start": price["date"],
+                    }
+                )
+            pset.update({"end": get_next_midnight()})
+            price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
     async def handle_update(self) -> None:
