@@ -129,6 +129,8 @@ class StromligningAPI:
         self.prices_tomorrow = []
         self.prices_forecasts = []
 
+        forecast_data: bool = False
+
         for price in self._data.prices:
             if (
                 price["date"] >= today_midnight_utc
@@ -142,12 +144,14 @@ class StromligningAPI:
             ):
                 price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
                 self.prices_tomorrow.append(price)
+                if price.get("forecast", False):
+                    forecast_data = True
             else:
                 price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
                 self.prices_forecasts.append(price)
 
         LOGGER.debug("Found %s entries for tomorrow", len(self.prices_tomorrow))
-        if len(self.prices_tomorrow) >= 23:
+        if len(self.prices_tomorrow) >= 23 and not forecast_data:
             LOGGER.debug("Prices for tomorrow are valid")
             self.tomorrow_available = True
         else:
