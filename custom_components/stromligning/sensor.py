@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components import sensor
