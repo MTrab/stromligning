@@ -247,7 +247,7 @@
                     }
                 }
             },
-            "spotprice_vat": {
+            "tomorrow_spotprice_vat": {
                 "name": "Spotpriser for i morgen inkl. moms",
                 "state": {
                     "on": "Klar",
@@ -262,7 +262,7 @@
                     }
                 }
             },
-            "spotprice_ex_vat": {
+            "tomorrow_spotprice_ex_vat": {
                 "name": "Spotpriser for i morgen ekskl. moms",
                 "state": {
                     "on": "Klar",

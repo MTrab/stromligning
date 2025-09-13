@@ -247,7 +247,7 @@
                     }
                 }
             },
-            "spotprice_vat": {
+            "tomorrow_spotprice_vat": {
                 "name": "Tomorrow spotprices incl. VAT",
                 "state": {
                     "on": "Available",
@@ -262,7 +262,7 @@
                     }
                 }
             },
-            "spotprice_ex_vat": {
+            "tomorrow_spotprice_ex_vat": {
                 "name": "Tomorrow spotprices excl. VAT",
                 "state": {
                     "on": "Available",
