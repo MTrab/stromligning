@@ -129,19 +129,25 @@ class StromligningAPI:
         self.prices_tomorrow = []
         self.prices_forecasts = []
 
+        self.spot_today = []
+        self.spot_tomorrow = []
+
         for price in self._data.prices:
+            # Today
             if (
                 price["date"] >= today_midnight_utc
                 and price["date"] < tomorrow_midnight_utc
             ):
                 price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
                 self.prices_today.append(price)
+            # Tomorrow
             elif (
                 price["date"] >= tomorrow_midnight_utc
                 and price["date"] < day3_midnight_utc
             ):
                 price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
                 self.prices_tomorrow.append(price)
+            # Forecasts
             else:
                 price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
                 self.prices_forecasts.append(price)
