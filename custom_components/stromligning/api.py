@@ -38,6 +38,7 @@ class StromligningAPI:
         self.prices_tomorrow: list = []
 
         self.tomorrow_available: bool = False
+        self.tomorrow_available_state: bool = False
 
         self.listeners = []
 
@@ -154,13 +155,17 @@ class StromligningAPI:
                 self.prices_forecasts.append(price)
 
         LOGGER.debug("Found %s entries for tomorrow", len(self.prices_tomorrow))
-        if len(self.prices_tomorrow) >= 23 and not forecast_data:
+        if len(self.prices_tomorrow) >= 23:
             LOGGER.debug("Prices for tomorrow are valid")
             self.tomorrow_available = True
+            self.tomorrow_available_state = True
+            if forecast_data:
+                self.tomorrow_available_state = False
         else:
             LOGGER.debug("Prices for tomorrow are NOT valid")
             self.prices_tomorrow = []
             self.tomorrow_available = False
+            self.tomorrow_available_state = False
         async_dispatcher_send(self.hass, util_slugify(UPDATE_SIGNAL_NEXT))
 
     def get_current(self, vat: bool = True) -> str | None:
