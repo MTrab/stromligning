@@ -17,7 +17,7 @@ from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
 from .base import StromligningBinarySensorEntityDescription, get_next_midnight
-from .const import ATTR_PRICES, DOMAIN, UPDATE_SIGNAL
+from .const import ATTR_FORECAST_DATA, ATTR_PRICES, DOMAIN, UPDATE_SIGNAL
 
 LOGGER = logging.getLogger(__name__)
 
@@ -126,7 +126,10 @@ class StromligningBinarySensor(BinarySensorEntity):
         if self.entity_description.key == "tomorrow_available_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
-                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+                {
+                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
+                    ATTR_FORECAST_DATA: self.api.forecast_data,
+                }
             )
             price_set: list = []
             pset = {}
@@ -149,7 +152,10 @@ class StromligningBinarySensor(BinarySensorEntity):
         elif self.entity_description.key == "tomorrow_available_ex_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
-                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+                {
+                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
+                    ATTR_FORECAST_DATA: self.api.forecast_data,
+                }
             )
             price_set: list = []
             pset = {}
@@ -165,18 +171,17 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update(
-                {
-                    "end": get_next_midnight()
-                }
-            )
+            pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
         elif self.entity_description.key == "tomorrow_spotprice_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
-                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+                {
+                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
+                    ATTR_FORECAST_DATA: self.api.forecast_data,
+                }
             )
             price_set: list = []
             pset = {}
@@ -192,18 +197,17 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update(
-                {
-                    "end": get_next_midnight()
-                }
-            )
+            pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
         elif self.entity_description.key == "tomorrow_spotprice_ex_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
-                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+                {
+                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
+                    ATTR_FORECAST_DATA: self.api.forecast_data,
+                }
             )
             price_set: list = []
             pset = {}
@@ -219,18 +223,17 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update(
-                {
-                    "end": get_next_midnight()
-                }
-            )
+            pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
         elif self.entity_description.key == "tomorrow_spotprice_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
-                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+                {
+                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
+                    ATTR_FORECAST_DATA: self.api.forecast_data,
+                }
             )
             price_set: list = []
             pset = {}
@@ -246,18 +249,17 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update(
-                {
-                    "end": get_next_midnight()
-                }
-            )
+            pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
         elif self.entity_description.key == "tomorrow_spotprice_ex_vat":
             self._attr_extra_state_attributes = {}
             self._attr_extra_state_attributes.update(
-                {"available_at": self.api.get_next_update().strftime("%H:%M:%S")}
+                {
+                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
+                    ATTR_FORECAST_DATA: self.api.forecast_data,
+                }
             )
             price_set: list = []
             pset = {}
@@ -273,11 +275,7 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update(
-                {
-                    "end": get_next_midnight()
-                }
-            )
+            pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 

@@ -13,6 +13,7 @@ https://github.com/mtrab/stromligning/issues
 """
 
 ATTR_PRICES = "prices"
+ATTR_FORECAST_DATA = "forecast_data"
 
 CONF_AGGREGATION = "aggregation"
 CONF_COMPANY = "company"
