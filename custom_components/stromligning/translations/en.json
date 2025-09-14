@@ -229,6 +229,13 @@
                     },
                     "prices": {
                         "name": "Prices tomorrow"
+                    },
+                    "forecast_data": {
+                        "name": "Origins from forecast data",
+                        "state": {
+                            "true": "Yes",
+                            "false": "No"
+                        }
                     }
                 }
             },
@@ -244,6 +251,13 @@
                     },
                     "prices": {
                         "name": "Prices tomorrow"
+                    },
+                    "forecast_data": {
+                        "name": "Origins from forecast data",
+                        "state": {
+                            "true": "Yes",
+                            "false": "No"
+                        }
                     }
                 }
             },
@@ -259,6 +273,13 @@
                     },
                     "prices": {
                         "name": "Spotprices tomorrow"
+                    },
+                    "forecast_data": {
+                        "name": "Origins from forecast data",
+                        "state": {
+                            "true": "Yes",
+                            "false": "No"
+                        }
                     }
                 }
             },
@@ -274,6 +295,13 @@
                     },
                     "prices": {
                         "name": "Spotprices tomorrow"
+                    },
+                    "forecast_data": {
+                        "name": "Origins from forecast data",
+                        "state": {
+                            "true": "Yes",
+                            "false": "No"
+                        }
                     }
                 }
             }

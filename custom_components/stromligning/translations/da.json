@@ -229,6 +229,13 @@
                     },
                     "prices": {
                         "name": "Priser for i morgen"
+                    },
+                    "forecast_data": {
+                        "name": "Priser stammer fra udsigter",
+                        "state": {
+                            "true": "Ja",
+                            "false": "Nej"
+                        }
                     }
                 }
             },
@@ -244,6 +251,13 @@
                     },
                     "prices": {
                         "name": "Priser for i morgen"
+                    },
+                    "forecast_data": {
+                        "name": "Priser stammer fra udsigter",
+                        "state": {
+                            "true": "Ja",
+                            "false": "Nej"
+                        }
                     }
                 }
             },
@@ -259,6 +273,13 @@
                     },
                     "prices": {
                         "name": "Spotpriser for i morgen"
+                    },
+                    "forecast_data": {
+                        "name": "Priser stammer fra udsigter",
+                        "state": {
+                            "true": "Ja",
+                            "false": "Nej"
+                        }
                     }
                 }
             },
@@ -274,6 +295,13 @@
                     },
                     "prices": {
                         "name": "Spotpriser for i morgen"
+                    },
+                    "forecast_data": {
+                        "name": "Priser stammer fra udsigter",
+                        "state": {
+                            "true": "Ja",
+                            "false": "Nej"
+                        }
                     }
                 }
             }
