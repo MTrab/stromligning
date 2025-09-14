@@ -59,6 +59,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 api.prices_today = api.prices_tomorrow
                 api.prices_tomorrow = []
                 api.tomorrow_available = False
+                api.tomorrow_available_state = False
             else:
                 await api.update_prices()
                 await api.prepare_data()
