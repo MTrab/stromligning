@@ -145,7 +145,8 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update({"end": get_next_midnight()})
+            if "start" in pset:
+                pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
@@ -171,7 +172,8 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update({"end": get_next_midnight()})
+            if "start" in pset:
+                pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
@@ -197,7 +199,8 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update({"end": get_next_midnight()})
+            if "start" in pset:
+                pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
@@ -223,7 +226,8 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update({"end": get_next_midnight()})
+            if "start" in pset:
+                pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
@@ -249,7 +253,8 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update({"end": get_next_midnight()})
+            if "start" in pset:
+                pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
@@ -275,7 +280,8 @@ class StromligningBinarySensor(BinarySensorEntity):
                         "start": price["date"],
                     }
                 )
-            pset.update({"end": get_next_midnight()})
+            if "start" in pset:
+                pset.update({"end": get_next_midnight()})
             price_set.append(pset)
             self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
 
