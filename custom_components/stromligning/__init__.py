@@ -89,7 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         if forecasts:
             update_forecast = async_track_utc_time_change(
-                hass, get_new_data, hour="/6", minute=10  # UTC time!!
+                hass, get_new_data, hour="/6", minute=10, second=0  # UTC time!!
             )
             api.listeners.append(update_forecast)
 
