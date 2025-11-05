@@ -4,15 +4,15 @@
             "already_configured": "Integration med samme navn eksisterer allerede"
         },
         "error": {
-            "too_many_requests": "Too many requests to the API - try again in 15 minutes"
+            "too_many_requests": "For mange API-forespørgsler – prøv igen om 15 minutter"
         },
         "step": {
             "user": {
                 "data": {
                     "name": "Navn til integrationen",
-                    "company": "El leverandør",
-                    "aggregation": "Opløsning på priser",
-                    "forecasts": "Inkluder pris udsigter for den næste uge? (kan være unøjagtige)"
+                    "company": "Elleverandør",
+                    "aggregation": "Dataopløsning på priser",
+                    "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)"
                 }
             }
         }
@@ -22,14 +22,14 @@
             "already_configured": "Integration med samme navn eksisterer allerede"
         },
         "error": {
-            "too_many_requests": "Too many requests to the API - try again in 15 minutes"
+            "too_many_requests": "For mange API-forespørgsler – prøv igen om 15 minutter"
         },
         "step": {
             "init": {
                 "data": {
-                    "company": "El leverandør",
-                    "aggregation": "Opløsning på priser",
-                    "forecasts": "Inkluder pris udsigter for den næste uge? (kan være unøjagtige)"
+                    "company": "Elleverandør",
+                    "aggregation": "Dataopløsning på priser",
+                    "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)"
                 }
             }
         }
@@ -38,7 +38,7 @@
         "aggregation": {
             "options": {
                 "15m": "15 minutter",
-                "1h": "Time pris"
+                "1h": "1 time (gennemsnit)"
             }
         }
     },
@@ -61,10 +61,10 @@
                 }
             },
             "distribution_vat": {
-                "name": "Transportudgifter til dit lokale netselskab inkl. moms"
+                "name": "Transporttarif til netselskab inkl. moms"
             },
             "distribution_ex_vat": {
-                "name": "Transportudgifter til dit lokale netselskab ekskl. moms"
+                "name": "Transporttarif til netselskab ekskl. moms"
             },
             "electricity_tax_vat": {
                 "name": "Elafgift inkl. moms"
@@ -73,7 +73,7 @@
                 "name": "Elafgift ekskl. moms"
             },
             "forecasts_vat": {
-                "name": "Pris udsigt inkl. moms",
+                "name": "Prisudsigt inkl. moms",
                 "state_attributes": {
                     "prices": {
                         "name": "Priser den næste uge"
@@ -81,7 +81,7 @@
                 }
             },
             "forecasts_ex_vat": {
-                "name": "Pris udsigt ekskl. moms",
+                "name": "Prisudsigt ekskl. moms",
                 "state_attributes": {
                     "prices": {
                         "name": "Priser den næste uge"
@@ -89,19 +89,19 @@
                 }
             },
             "net_owner": {
-                "name": "Elnet operatør"
+                "name": "Elnetselskab"
             },
             "nettariff_vat": {
-                "name": "Nettariff inkl. moms"
+                "name": "Nettarif inkl. moms"
             },
             "nettariff_ex_vat": {
-                "name": "Nettariff ekskl. moms"
+                "name": "Nettarif ekskl. moms"
             },
             "next_data_refresh": {
-                "name": "Næste data opdatering"
+                "name": "Næste dataopdatering"
             },
             "provider": {
-                "name": "El aftale"
+                "name": "Elaftale"
             },
             "spotprice_vat": {
                 "name": "Spotpris inkl. moms"
@@ -116,13 +116,13 @@
                 "name": "Tillæg til spotpris ekskl. moms"
             },
             "systemtariff_vat": {
-                "name": "Systemtariff inkl. moms"
+                "name": "Systemtarif inkl. moms"
             },
             "systemtariff_ex_vat": {
-                "name": "Systemtariff ekskl. moms"
+                "name": "Systemtarif ekskl. moms"
             },
             "today_min_vat": {
-                "name": "Minimum pris resten af dagen inkl. moms",
+                "name": "Laveste pris resten af dagen inkl. moms",
                 "state_attributes": {
                     "at": {
                         "name": "Tidspunkt"
@@ -130,7 +130,7 @@
                 }
             },
             "today_min_ex_vat": {
-                "name": "Minimum pris resten af dagen ekskl. moms",
+                "name": "Laveste pris resten af dagen ekskl. moms",
                 "state_attributes": {
                     "at": {
                         "name": "Tidspunkt"
@@ -138,7 +138,7 @@
                 }
             },
             "today_max_vat": {
-                "name": "Maximum pris resten af dagen inkl. moms",
+                "name": "Højeste pris resten af dagen inkl. moms",
                 "state_attributes": {
                     "at": {
                         "name": "Tidspunkt"
@@ -146,7 +146,7 @@
                 }
             },
             "today_max_ex_vat": {
-                "name": "Maximum pris resten af dagen ekskl. moms",
+                "name": "Højeste pris resten af dagen ekskl. moms",
                 "state_attributes": {
                     "at": {
                         "name": "Tidspunkt"
@@ -154,13 +154,13 @@
                 }
             },
             "today_mean_vat": {
-                "name": "Gennemsnits pris resten af dagen inkl. moms"
+                "name": "Gennemsnitspris resten af dagen inkl. moms"
             },
             "today_mean_ex_vat": {
-                "name": "Gennemsnits pris resten af dagen ekskl. moms"
+                "name": "Gennemsnitspris resten af dagen ekskl. moms"
             },
             "tomorrow_min_vat": {
-                "name": "Minimum pris i morgen inkl. moms",
+                "name": "Laveste pris i morgen inkl. moms",
                 "state": {
                     "unknown": "Ukendt"
                 },
@@ -171,7 +171,7 @@
                 }
             },
             "tomorrow_min_ex_vat": {
-                "name": "Minimum pris i morgen ekskl. moms",
+                "name": "Laveste pris i morgen ekskl. moms",
                 "state": {
                     "unknown": "Ukendt"
                 },
@@ -182,7 +182,7 @@
                 }
             },
             "tomorrow_max_vat": {
-                "name": "Maximum pris i morgen inkl. moms",
+                "name": "Højeste pris i morgen inkl. moms",
                 "state": {
                     "unknown": "Ukendt"
                 },
@@ -193,7 +193,7 @@
                 }
             },
             "tomorrow_max_ex_vat": {
-                "name": "Maximum pris i morgen ekskl. moms",
+                "name": "Højeste pris i morgen ekskl. moms",
                 "state": {
                     "unknown": "Ukendt"
                 },
@@ -204,13 +204,13 @@
                 }
             },
             "tomorrow_mean_vat": {
-                "name": "Gennemsnits pris i morgen inkl. moms",
+                "name": "Gennemsnitspris i morgen inkl. moms",
                 "state": {
                     "unknown": "Ukendt"
                 }
             },
             "tomorrow_mean_ex_vat": {
-                "name": "Gennemsnits pris i morgen ekskl. moms",
+                "name": "Gennemsnitspris i morgen ekskl. moms",
                 "state": {
                     "unknown": "Ukendt"
                 }
