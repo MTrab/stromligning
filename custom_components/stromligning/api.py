@@ -97,32 +97,14 @@ class StromligningAPI:
         """Prepare the data for use in Home Assistant."""
         LOGGER.debug("Preparing data")
 
-        today_midnight_utc = (
-            dt_utils.as_utc(
-                dt_utils.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            )
-            .isoformat()
-            .replace("+00:00", ".000Z")
+        today_midnight_utc = dt_utils.as_utc(
+            dt_utils.now().replace(hour=0, minute=0, second=0, microsecond=0)
         )
-
-        tomorrow_midnight_utc = (
-            dt_utils.as_utc(
-                (dt_utils.now() + timedelta(days=1)).replace(
-                    hour=0, minute=0, second=0, microsecond=0
-                )
-            )
-            .isoformat()
-            .replace("+00:00", ".000Z")
+        tomorrow_midnight_utc = dt_utils.as_utc(
+            (dt_utils.now() + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         )
-
-        day3_midnight_utc = (
-            dt_utils.as_utc(
-                (dt_utils.now() + timedelta(days=2)).replace(
-                    hour=0, minute=0, second=0, microsecond=0
-                )
-            )
-            .isoformat()
-            .replace("+00:00", ".000Z")
+        day3_midnight_utc = dt_utils.as_utc(
+            (dt_utils.now() + timedelta(days=2)).replace(hour=0, minute=0, second=0, microsecond=0)
         )
 
         self.prices_today = []
@@ -132,25 +114,19 @@ class StromligningAPI:
         self.forecast_data: bool = False
 
         for price in self._data.prices:
-            # Today
-            if (
-                price["date"] >= today_midnight_utc
-                and price["date"] < tomorrow_midnight_utc
-            ):
-                price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
+            # Convert the price date to datetime first
+            price_dt = datetime.fromisoformat(price["date"])
+
+            if today_midnight_utc <= price_dt < tomorrow_midnight_utc:
+                price["date"] = dt_utils.as_local(price_dt)
                 self.prices_today.append(price)
-            # Tomorrow
-            elif (
-                price["date"] >= tomorrow_midnight_utc
-                and price["date"] < day3_midnight_utc
-            ):
-                price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
+            elif tomorrow_midnight_utc <= price_dt < day3_midnight_utc:
+                price["date"] = dt_utils.as_local(price_dt)
                 self.prices_tomorrow.append(price)
                 if price.get("forecast", False):
                     self.forecast_data = True
-            # Forecasts
             else:
-                price["date"] = dt_utils.as_local(datetime.fromisoformat(price["date"]))
+                price["date"] = dt_utils.as_local(price_dt)
                 self.prices_forecasts.append(price)
 
         LOGGER.debug("Found %s entries for tomorrow", len(self.prices_tomorrow))
