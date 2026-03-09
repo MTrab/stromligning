@@ -28,14 +28,7 @@ The integration automatically recognises tariff settings from the Home Assistant
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=MTrab&repository=stromligning)
 
-### Option 2 - Add custom repository to HACS:
-
-*   See [this link](https://www.hacs.xyz/docs/faq/custom_repositories/) for how to add a custom repository to HACS.
-*   Add `https://github.com/MTrab/stromligning` as custom repository of type Integration
-*   Search for and install the "Stromligning" integration.
-*   Restart Home Assistant.
-
-### Option 3 - Manual installation:
+### Option 2 - Manual installation:
 
 *   Download the latest release.
 *   Unpack the release and copy the custom\_components/stromligning directory into the custom\_components directory of your Home Assistant installation.
