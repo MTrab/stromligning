@@ -5,7 +5,7 @@ sort-direction: ascending
 exclude-labels:
   - 'skip-changelog'
 categories:
-  - title: '⚒️ Breaking Changes'
+  - title: '🛠 Breaking Changes'
     labels:
       - breaking-change
 
@@ -16,23 +16,15 @@ categories:
 
   - title: '🐛 Bug Fixes'
     labels:
-      - 'fix'
-      - 'bugfix'
       - 'bug'
-
-  - title: '🧬 Changes to Charge Owner informations'
-    labels:
-      - chargeowner
-      - chargeowners
-
-  - title: '🧬 New Charge Owner(s) added'
-    labels:
-      - 'new chargeowner'
 
   - title: '🧰 Maintenance'
     label: 'chore'
 
-  - title: '📦 Dependencies'
+  - title: '🌐 Translations'
+    label: 'translation'
+
+  - title: ":package: Dependencies"
     labels:
       - 'dependencies'
 
@@ -63,3 +55,18 @@ autolabeler:
   - label: 'feature request'
     branch:
       - '/feature\/.+/'
+  - label: 'enhancement'
+    branch:
+      - '/enhancement\/.+/'
+  - label: 'chore'
+    branch:
+      - '/chore\/.+/'
+  - label: 'translation'
+    branch:
+      - '/translation\/.+/'
+  - label: 'dependencies'
+    branch:
+      - '/dependabot\/.+/'
+  - label: 'documentation'
+    branch:
+      - '/documentation\/.+/'
