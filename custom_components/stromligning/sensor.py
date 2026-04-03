@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 from homeassistant.components import sensor
 from homeassistant.components.sensor import (
@@ -22,6 +23,9 @@ from .base import StromligningSensorEntityDescription, get_next_midnight
 from .const import ATTR_PRICES, CONF_FORECASTS, DOMAIN, UPDATE_SIGNAL_NEXT
 
 LOGGER = logging.getLogger(__name__)
+
+PriceValueGetter = Callable[[dict], str | float | int | None]
+AtValueGetter = Callable[[StromligningAPI], object]
 
 SENSORS = [
     StromligningSensorEntityDescription(
@@ -479,193 +483,105 @@ class StromligningSensor(SensorEntity):
             )
         )
 
+    @staticmethod
+    def _build_price_attributes(
+        prices: list[dict], value_getter: PriceValueGetter
+    ) -> dict[str, list[dict]]:
+        """Build price attributes for sensors that expose price periods."""
+        price_set: list[dict] = []
+        pset: dict = {}
+
+        for price in prices:
+            if "start" in pset:
+                pset.update({"end": price["date"]})
+                price_set.append(pset)
+                pset = {}
+
+            pset.update(
+                {
+                    "price": value_getter(price),
+                    "start": price["date"],
+                }
+            )
+
+        pset.update({"end": get_next_midnight()})
+        price_set.append(pset)
+
+        return {ATTR_PRICES: price_set}
+
     async def handle_attributes(self) -> None:
         """Handle attributes."""
-        if self.entity_description.key == "current_price_vat":
-            self._attr_extra_state_attributes = {}
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_today:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
+        key = self.entity_description.key
 
-                pset.update(
-                    {
-                        "price": price["price"]["total"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
+        price_attribute_map: dict[str, tuple[list[dict], PriceValueGetter]] = {
+            "current_price_vat": (
+                self.api.prices_today,
+                lambda price: price["price"]["total"],
+            ),
+            "current_price_ex_vat": (
+                self.api.prices_today,
+                lambda price: price["price"]["value"],
+            ),
+            "distribution_vat": (
+                self.api.prices_today,
+                lambda price: price["details"]["distribution"]["total"],
+            ),
+            "distribution_ex_vat": (
+                self.api.prices_today,
+                lambda price: price["details"]["distribution"]["value"],
+            ),
+            "forecasts_vat": (
+                self.api.prices_forecasts,
+                lambda price: price["price"]["total"],
+            ),
+            "forecasts_ex_vat": (
+                self.api.prices_forecasts,
+                lambda price: price["price"]["value"],
+            ),
+            "spotprice_vat": (
+                self.api.prices_today,
+                lambda price: price["details"]["electricity"]["total"],
+            ),
+            "spotprice_ex_vat": (
+                self.api.prices_today,
+                lambda price: price["details"]["electricity"]["value"],
+            ),
+        }
 
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-        elif self.entity_description.key == "current_price_ex_vat":
-            self._attr_extra_state_attributes = {}
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_today:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
+        at_attribute_map: dict[str, AtValueGetter] = {
+            "today_min_vat": lambda api: api.get_specific_today(
+                "min", date=True, vat=True
+            ),
+            "today_min_ex_vat": lambda api: api.get_specific_today(
+                "min", date=True, vat=False
+            ),
+            "today_max_vat": lambda api: api.get_specific_today(
+                "max", date=True, vat=True
+            ),
+            "today_max_ex_vat": lambda api: api.get_specific_today(
+                "max", date=True, vat=False
+            ),
+            "tomorrow_min_vat": lambda api: api.get_specific_tomorrow(
+                "min", date=True, vat=True
+            ),
+            "tomorrow_min_ex_vat": lambda api: api.get_specific_tomorrow(
+                "min", date=True, vat=False
+            ),
+            "tomorrow_max_vat": lambda api: api.get_specific_tomorrow(
+                "max", date=True, vat=True
+            ),
+            "tomorrow_max_ex_vat": lambda api: api.get_specific_tomorrow(
+                "max", date=True, vat=False
+            ),
+        }
 
-                pset.update(
-                    {
-                        "price": price["price"]["value"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-        elif self.entity_description.key == "distribution_vat":
-            self._attr_extra_state_attributes = {}
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_today:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
-
-                pset.update(
-                    {
-                        "price": price["details"]["distribution"]["total"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-        elif self.entity_description.key == "distribution_ex_vat":
-            self._attr_extra_state_attributes = {}
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_today:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
-
-                pset.update(
-                    {
-                        "price": price["details"]["distribution"]["value"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-        elif self.entity_description.key == "today_min_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {"at": self.api.get_specific_today("min", date=True, vat=True)}
+        if key in price_attribute_map:
+            prices, value_getter = price_attribute_map[key]
+            self._attr_extra_state_attributes = self._build_price_attributes(
+                prices, value_getter
             )
-        elif self.entity_description.key == "today_min_ex_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {"at": self.api.get_specific_today("min", date=True, vat=False)}
-            )
-        elif self.entity_description.key == "today_max_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {"at": self.api.get_specific_today("max", date=True, vat=True)}
-            )
-        elif self.entity_description.key == "today_max_ex_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {"at": self.api.get_specific_today("max", date=True, vat=False)}
-            )
-        elif self.entity_description.key == "tomorrow_min_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {"at": self.api.get_specific_tomorrow("min", date=True, vat=True)}
-            )
-        elif self.entity_description.key == "tomorrow_min_ex_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {"at": self.api.get_specific_tomorrow("min", date=True, vat=False)}
-            )
-        elif self.entity_description.key == "tomorrow_max_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {"at": self.api.get_specific_tomorrow("max", date=True, vat=True)}
-            )
-        elif self.entity_description.key == "tomorrow_max_ex_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {"at": self.api.get_specific_tomorrow("max", date=True, vat=False)}
-            )
-        elif (
-            self.entity_description.key == "forecasts_vat"
-            or self.entity_description.key == "forecasts_ex_vat"
-        ):
-            self._attr_extra_state_attributes = {}
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_forecasts:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
-
-                pset.update(
-                    {
-                        "price": (
-                            price["price"]["total"]
-                            if self.entity_description.key == "forecasts_vat"
-                            else price["price"]["value"]
-                        ),
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-        elif self.entity_description.key == "spotprice_vat":
-            self._attr_extra_state_attributes = {}
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_today:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
-
-                pset.update(
-                    {
-                        "price": price["details"]["electricity"]["total"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-        elif self.entity_description.key == "spotprice_ex_vat":
-            self._attr_extra_state_attributes = {}
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_today:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
-
-                pset.update(
-                    {
-                        "price": price["details"]["electricity"]["value"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
+        elif key in at_attribute_map:
+            self._attr_extra_state_attributes = {"at": at_attribute_map[key](self.api)}
 
     async def handle_update(self) -> None:
         """Handle data update."""
