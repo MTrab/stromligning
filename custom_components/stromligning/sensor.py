@@ -289,6 +289,16 @@ SENSORS = [
         translation_key="provider",
     ),
     StromligningSensorEntityDescription(
+        key="price_resolution",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=None,
+        device_class=None,
+        icon="mdi:chart-timeline-variant",
+        value_fn=lambda stromligning: stromligning.get_aggregation(),
+        entity_registry_enabled_default=True,
+        translation_key="price_resolution",
+    ),
+    StromligningSensorEntityDescription(
         key="surcharge_vat",
         entity_category=None,
         state_class=SensorStateClass.TOTAL,
