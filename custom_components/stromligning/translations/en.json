@@ -103,6 +103,13 @@
             "provider": {
                 "name": "Provider agreement"
             },
+            "price_resolution": {
+                "name": "Price resolution",
+                "state": {
+                    "15m": "15 minutes",
+                    "1h": "Hourly"
+                }
+            },
             "spotprice_vat": {
                 "name": "Spotprice incl. VAT"
             },

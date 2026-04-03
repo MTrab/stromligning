@@ -334,6 +334,10 @@ class StromligningAPI:
     def get_power_provider(self) -> str:
         """Get power provider."""
         return self._data.company["name"]
+    
+    def get_aggregation(self) -> str:
+        """Get configured price aggregation."""
+        return str(self._entry.options.get(CONF_AGGREGATION, "1h"))
 
     def get_surcharge(self, vat: bool = True) -> float | None:
         """Get surcharge from API."""

@@ -103,6 +103,13 @@
             "provider": {
                 "name": "Elaftale"
             },
+            "price_resolution": {
+                "name": "Prisopløsning",
+                "state": {
+                    "15m": "15 minutter",
+                    "1h": "Timevis"
+                }
+            },
             "spotprice_vat": {
                 "name": "Spotpris inkl. moms"
             },
