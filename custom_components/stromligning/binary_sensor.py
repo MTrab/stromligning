@@ -14,7 +14,7 @@ from homeassistant.util import slugify as util_slugify
 from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
-from .base import StromligningBinarySensorEntityDescription, get_next_midnight
+from .base import StromligningBinarySensorEntityDescription, build_price_attributes
 from .const import ATTR_FORECAST_DATA, ATTR_PRICES, DOMAIN, UPDATE_SIGNAL
 
 LOGGER = logging.getLogger(__name__)
@@ -121,161 +121,28 @@ class StromligningBinarySensor(BinarySensorEntity):
 
     async def handle_attributes(self) -> None:
         """Handle attributes."""
-        if self.entity_description.key == "tomorrow_available_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {
-                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
-                    ATTR_FORECAST_DATA: self.api.forecast_data,
-                }
-            )
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_tomorrow:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
+        key = self.entity_description.key
+        price_attribute_map = {
+            "tomorrow_available_vat": lambda price: price["price"]["total"],
+            "tomorrow_available_ex_vat": lambda price: price["price"]["value"],
+            "tomorrow_spotprice_vat": lambda price: price["details"]["electricity"][
+                "total"
+            ],
+            "tomorrow_spotprice_ex_vat": lambda price: price["details"]["electricity"][
+                "value"
+            ],
+        }
 
-                pset.update(
-                    {
-                        "price": price["price"]["total"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-
-        elif self.entity_description.key == "tomorrow_available_ex_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {
-                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
-                    ATTR_FORECAST_DATA: self.api.forecast_data,
-                }
-            )
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_tomorrow:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
-
-                pset.update(
-                    {
-                        "price": price["price"]["value"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-
-        elif self.entity_description.key == "tomorrow_spotprice_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {
-                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
-                    ATTR_FORECAST_DATA: self.api.forecast_data,
-                }
-            )
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_tomorrow:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
-
-                pset.update(
-                    {
-                        "price": price["details"]["electricity"]["total"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-
-        elif self.entity_description.key == "tomorrow_spotprice_ex_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {
-                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
-                    ATTR_FORECAST_DATA: self.api.forecast_data,
-                }
-            )
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_tomorrow:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
-
-                pset.update(
-                    {
-                        "price": price["details"]["electricity"]["value"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-
-        elif self.entity_description.key == "tomorrow_spotprice_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {
-                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
-                    ATTR_FORECAST_DATA: self.api.forecast_data,
-                }
-            )
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_tomorrow:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
-
-                pset.update(
-                    {
-                        "price": price["details"]["electricity"]["total"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
-
-        elif self.entity_description.key == "tomorrow_spotprice_ex_vat":
-            self._attr_extra_state_attributes = {}
-            self._attr_extra_state_attributes.update(
-                {
-                    "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
-                    ATTR_FORECAST_DATA: self.api.forecast_data,
-                }
-            )
-            price_set: list = []
-            pset = {}
-            for price in self.api.prices_tomorrow:
-                if "start" in pset:
-                    pset.update({"end": price["date"]})
-                    price_set.append(pset)
-                    pset = {}
-
-                pset.update(
-                    {
-                        "price": price["details"]["electricity"]["value"],
-                        "start": price["date"],
-                    }
-                )
-            pset.update({"end": get_next_midnight()})
-            price_set.append(pset)
-            self._attr_extra_state_attributes.update({ATTR_PRICES: price_set})
+        if key in price_attribute_map:
+            self._attr_extra_state_attributes = {
+                "available_at": self.api.get_next_update().strftime("%H:%M:%S"),
+                ATTR_FORECAST_DATA: self.api.forecast_data,
+                **build_price_attributes(
+                    self.api.prices_tomorrow,
+                    price_attribute_map[key],
+                    self.api.get_aggregation(),
+                ),
+            }
 
     async def handle_update(self) -> None:
         """Handle data update."""

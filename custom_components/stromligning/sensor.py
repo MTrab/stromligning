@@ -19,12 +19,14 @@ from homeassistant.util import slugify as util_slugify
 from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from .api import StromligningAPI
-from .base import StromligningSensorEntityDescription, get_next_midnight
+from .base import (
+    StromligningSensorEntityDescription,
+    build_price_attributes,
+)
 from .const import ATTR_PRICES, CONF_FORECASTS, DOMAIN, UPDATE_SIGNAL_NEXT
 
 LOGGER = logging.getLogger(__name__)
 
-PriceValueGetter = Callable[[dict], str | float | int | None]
 AtValueGetter = Callable[[StromligningAPI], object]
 
 SENSORS = [
@@ -493,37 +495,11 @@ class StromligningSensor(SensorEntity):
             )
         )
 
-    @staticmethod
-    def _build_price_attributes(
-        prices: list[dict], value_getter: PriceValueGetter
-    ) -> dict[str, list[dict]]:
-        """Build price attributes for sensors that expose price periods."""
-        price_set: list[dict] = []
-        pset: dict = {}
-
-        for price in prices:
-            if "start" in pset:
-                pset.update({"end": price["date"]})
-                price_set.append(pset)
-                pset = {}
-
-            pset.update(
-                {
-                    "price": value_getter(price),
-                    "start": price["date"],
-                }
-            )
-
-        pset.update({"end": get_next_midnight()})
-        price_set.append(pset)
-
-        return {ATTR_PRICES: price_set}
-
     async def handle_attributes(self) -> None:
         """Handle attributes."""
         key = self.entity_description.key
 
-        price_attribute_map: dict[str, tuple[list[dict], PriceValueGetter]] = {
+        price_attribute_map = {
             "current_price_vat": (
                 self.api.prices_today,
                 lambda price: price["price"]["total"],
@@ -587,8 +563,10 @@ class StromligningSensor(SensorEntity):
 
         if key in price_attribute_map:
             prices, value_getter = price_attribute_map[key]
-            self._attr_extra_state_attributes = self._build_price_attributes(
-                prices, value_getter
+            self._attr_extra_state_attributes = build_price_attributes(
+                prices,
+                value_getter,
+                self.api.get_aggregation(),
             )
         elif key in at_attribute_map:
             self._attr_extra_state_attributes = {"at": at_attribute_map[key](self.api)}
