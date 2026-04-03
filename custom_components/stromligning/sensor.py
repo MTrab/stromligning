@@ -296,7 +296,7 @@ SENSORS = [
         device_class=None,
         icon="mdi:chart-timeline-variant",
         value_fn=lambda stromligning: stromligning.get_aggregation(),
-        entity_registry_enabled_default=True,
+        entity_registry_enabled_default=False,
         translation_key="price_resolution",
     ),
     StromligningSensorEntityDescription(
@@ -418,7 +418,7 @@ SENSORS = [
         device_class=SensorDeviceClass.TIMESTAMP,
         icon="mdi:electron-framework",
         value_fn=lambda stromligning: stromligning.get_forecasts(vat=False),
-        entity_registry_enabled_default=True,
+        entity_registry_enabled_default=False,
         translation_key="forecasts_ex_vat",
     ),
 ]
