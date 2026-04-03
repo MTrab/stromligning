@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
 
 from homeassistant.components import binary_sensor
 from homeassistant.components.binary_sensor import BinarySensorEntity
@@ -11,7 +10,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.util import dt as dt_utils
 from homeassistant.util import slugify as util_slugify
 from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
@@ -62,11 +60,11 @@ BINARY_SENSORS = [
 
 
 async def async_setup_entry(hass, entry: ConfigEntry, async_add_devices):
-    """Setup binary_sensors."""
+    """Set up binary sensors."""
     binary_sensors = []
 
-    for binary_sensor in BINARY_SENSORS:
-        entity = StromligningBinarySensor(binary_sensor, hass, entry)
+    for description in BINARY_SENSORS:
+        entity = StromligningBinarySensor(description, hass, entry)
         LOGGER.debug(
             "Added binary_sensor with entity_id '%s'",
             entity.entity_id,
