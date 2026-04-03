@@ -15,7 +15,7 @@ jobs:
       RELEASE_TAG: ${{ github.event.release.tag_name }}
       RELEASE_ID: ${{ github.event.release.id }}
       IS_PRERELEASE: ${{ github.event.release.prerelease }}
-      DEFAULT_BRANCH: master
+      DEFAULT_BRANCH: main
       COMPONENT_PATH: custom_components/stromligning
       MANIFEST_FILE: custom_components/stromligning/manifest.json
       ASSET_NAME: stromligning.zip
@@ -35,7 +35,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          ref: master
+          ref: main
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Configure git author
