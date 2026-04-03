@@ -304,5 +304,6 @@ class StromligningBinarySensor(BinarySensorEntity):
             self._attr_available = False
 
     async def async_added_to_hass(self):
+        """Fetch initial state when the entity is added to Home Assistant."""
         await self.handle_update()
         return await super().async_added_to_hass()
