@@ -46,15 +46,28 @@ Add "Stromligning" integration _(If it doesn't show, try CTRL+F5 to force a refr
 
 ## Use the custom template to show the next x cheapest hours
 
-Copy the `custom_templates/FindCheapestPrice.jinja` to the `custom_templates` directory in your config folder (if it doesn't exist then create the folder)
-Reload Home Assistant and use the Jinja template by inserting the example below in a template sensor helper
+Copy the `custom_templates/FindCheapestPeriod.jinja` and `custom_templates/FindCheapestPeriodPrice.jinja` to the `custom_templates` directory in your config folder (if it doesn't exist then create the folder)
+Reload Home Assistant and use the Jinja template by inserting the example below in your configuration.yaml. If you already have defined a template section, just copy in the sensor.
 
 ```
-{% from 'FindCheapestPeriod.jinja' import FindCheapestPeriod%}
-{% set earliestStartTime = now() %}
-{% set latestStartTime = now() + timedelta(days=2) %}
-{% set periodLength = timedelta(hours=3) %}
-{{ FindCheapestPeriod(earliestStartTime , latestStartTime , periodLength, false) }}
+template:
+- sensor:
+      - name: "Buy Cheapest 3hr"
+        unique_id: buy_cheapest_3hr
+        device_class: timestamp
+        state: >
+          {% from 'FindCheapestPeriod.jinja' import FindCheapestPeriod%}
+          {% set earliestStartTime = now() %}
+          {% set latestStartTime = now() + timedelta(days=1) %}
+          {% set periodLength = timedelta(hours=3) %}
+          {{ FindCheapestPeriod(earliestStartTime , latestStartTime , periodLength, false) }}
+        attributes:
+          avg_price: >
+            {% from 'FindCheapestPeriodPrice.jinja' import FindCheapestPeriod%}
+            {% set earliestStartTime = now() %}
+            {% set latestStartTime = now() + timedelta(days=1) %}
+            {% set periodLength = timedelta(hours=3) %}
+            {{ FindCheapestPeriod(earliestStartTime , latestStartTime , periodLength, false) }}
 ```
 
-This will result in a sensor showing the cheapest 3 hours within the known prices
+This will result in a sensor showing the cheapest 3 hours within the known prices and the average price for these 3 hours as an attribute.
