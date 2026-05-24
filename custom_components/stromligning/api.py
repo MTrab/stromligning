@@ -307,6 +307,24 @@ class StromligningAPI:
         except ValueError:
             return None
 
+    def get_tomorrow_current(self, vat: bool = True) -> str | None:
+        """Get the first available price for tomorrow."""
+        if not self.prices_tomorrow:
+            return None
+        price = self.prices_tomorrow[0]
+        return price["price"]["total"] if vat else price["price"]["value"]
+
+    def get_tomorrow_spot(self, vat: bool = True) -> str | None:
+        """Get the first available spot price for tomorrow."""
+        if not self.prices_tomorrow:
+            return None
+        price = self.prices_tomorrow[0]
+        return (
+            price["details"]["electricity"]["total"]
+            if vat
+            else price["details"]["electricity"]["value"]
+        )
+
     def get_next_update(self) -> datetime:
         """Get next API update timestamp."""
         n_update = self.next_update.split(":")
@@ -334,7 +352,7 @@ class StromligningAPI:
     def get_power_provider(self) -> str:
         """Get power provider."""
         return self._data.company["name"]
-    
+
     def get_aggregation(self) -> str:
         """Get configured price aggregation."""
         return str(self._entry.options.get(CONF_AGGREGATION, "1h"))

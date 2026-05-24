@@ -261,6 +261,54 @@ SENSORS = [
         unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
+        key="tomorrow_price_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_tomorrow_current(True),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=True,
+        translation_key="tomorrow_price_vat",
+        unit_of_measurement="kr/kWh",  # type: ignore
+    ),
+    StromligningSensorEntityDescription(
+        key="tomorrow_price_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:flash",
+        value_fn=lambda stromligning: stromligning.get_tomorrow_current(False),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="tomorrow_price_ex_vat",
+        unit_of_measurement="kr/kWh",  # type: ignore
+    ),
+    StromligningSensorEntityDescription(
+        key="tomorrow_spotprice_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:transmission-tower-import",
+        value_fn=lambda stromligning: stromligning.get_tomorrow_spot(True),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=True,
+        translation_key="tomorrow_spotprice_vat",
+        unit_of_measurement="kr/kWh",  # type: ignore
+    ),
+    StromligningSensorEntityDescription(
+        key="tomorrow_spotprice_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        icon="mdi:transmission-tower-import",
+        value_fn=lambda stromligning: stromligning.get_tomorrow_spot(False),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="tomorrow_spotprice_ex_vat",
+        unit_of_measurement="kr/kWh",  # type: ignore
+    ),
+    StromligningSensorEntityDescription(
         key="next_data_refresh",
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=None,
@@ -530,6 +578,22 @@ class StromligningSensor(SensorEntity):
             ),
             "spotprice_ex_vat": (
                 self.api.prices_today,
+                lambda price: price["details"]["electricity"]["value"],
+            ),
+            "tomorrow_price_vat": (
+                self.api.prices_tomorrow,
+                lambda price: price["price"]["total"],
+            ),
+            "tomorrow_price_ex_vat": (
+                self.api.prices_tomorrow,
+                lambda price: price["price"]["value"],
+            ),
+            "tomorrow_spotprice_vat": (
+                self.api.prices_tomorrow,
+                lambda price: price["details"]["electricity"]["total"],
+            ),
+            "tomorrow_spotprice_ex_vat": (
+                self.api.prices_tomorrow,
                 lambda price: price["details"]["electricity"]["value"],
             ),
         }

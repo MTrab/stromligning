@@ -221,6 +221,38 @@
                 "state": {
                     "unknown": "Unknown"
                 }
+            },
+            "tomorrow_price_vat": {
+                "name": "Tomorrow incl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Prices tomorrow"
+                    }
+                }
+            },
+            "tomorrow_price_ex_vat": {
+                "name": "Tomorrow excl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Prices tomorrow"
+                    }
+                }
+            },
+            "tomorrow_spotprice_vat": {
+                "name": "Tomorrow spotprice incl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Spotprices tomorrow"
+                    }
+                }
+            },
+            "tomorrow_spotprice_ex_vat": {
+                "name": "Tomorrow spotprice excl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Spotprices tomorrow"
+                    }
+                }
             }
         },
         "binary_sensor": {

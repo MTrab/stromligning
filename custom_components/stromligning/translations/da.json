@@ -221,6 +221,38 @@
                 "state": {
                     "unknown": "Ukendt"
                 }
+            },
+            "tomorrow_price_vat": {
+                "name": "I morgen inkl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Priser for i morgen"
+                    }
+                }
+            },
+            "tomorrow_price_ex_vat": {
+                "name": "I morgen ekskl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Priser for i morgen"
+                    }
+                }
+            },
+            "tomorrow_spotprice_vat": {
+                "name": "Spotpris i morgen inkl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Spotpriser for i morgen"
+                    }
+                }
+            },
+            "tomorrow_spotprice_ex_vat": {
+                "name": "Spotpris i morgen ekskl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Spotpriser for i morgen"
+                    }
+                }
             }
         },
         "binary_sensor": {
