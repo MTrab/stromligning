@@ -16,7 +16,7 @@ The integration automatically recognises tariff settings from the Home Assistant
 [**Setup**](#setup)
 
 [**Use the custom template to show the next x cheapest hours**](#use-the-custom-template-to-show-the-next-x-cheapest-hours)
- 
+
 
 ## Installation:
 
@@ -46,7 +46,7 @@ Add "Stromligning" integration _(If it doesn't show, try CTRL+F5 to force a refr
 
 ## Use the custom template to show the next x cheapest hours
 
-Copy the `custom_templates/FindCheapestPrice.jinja` to the `custom_templates` directory in your config folder (if it doesn't exist then create the folder)
+Copy the `custom_templates/FindCheapestPeriod.jinja` to the `custom_templates` directory in your config folder (if it doesn't exist then create the folder)
 Reload Home Assistant and use the Jinja template by inserting the example below in a template sensor helper
 
 ```
