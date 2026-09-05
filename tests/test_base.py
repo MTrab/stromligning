@@ -82,3 +82,32 @@ def test_build_price_attributes_uses_aggregation_fallback_for_single_value() -> 
             }
         ]
     }
+
+
+def test_build_price_attributes_includes_extra_interval_values() -> None:
+    """Extra value getters should add values to every price interval."""
+    prices = [
+        {
+            "date": datetime(2026, 2, 24, 23, 0, tzinfo=UTC),
+            "price": {"total": 1.3},
+            "details": {"electricity": {"total": 0.8}},
+        }
+    ]
+
+    result = build_price_attributes(
+        prices,
+        lambda price: price["price"]["total"],
+        "1h",
+        {"spotprice": lambda price: price["details"]["electricity"]["total"]},
+    )
+
+    assert result == {
+        "prices": [
+            {
+                "price": 1.3,
+                "start": datetime(2026, 2, 24, 23, 0, tzinfo=UTC),
+                "end": datetime(2026, 2, 25, 0, 0, tzinfo=UTC),
+                "spotprice": 0.8,
+            }
+        ]
+    }

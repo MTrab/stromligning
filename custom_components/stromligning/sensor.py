@@ -533,6 +533,14 @@ class StromligningSensor(SensorEntity):
                 lambda price: price["details"]["electricity"]["value"],
             ),
         }
+        extra_price_attribute_map = {
+            "forecasts_vat": {
+                "spotprice": lambda price: price["details"]["electricity"]["total"]
+            },
+            "forecasts_ex_vat": {
+                "spotprice": lambda price: price["details"]["electricity"]["value"]
+            },
+        }
 
         at_attribute_map: dict[str, AtValueGetter] = {
             "today_min_vat": lambda api: api.get_specific_today(
@@ -567,6 +575,7 @@ class StromligningSensor(SensorEntity):
                 prices,
                 value_getter,
                 self.api.get_aggregation(),
+                extra_price_attribute_map.get(key),
             )
         elif key in at_attribute_map:
             self._attr_extra_state_attributes = {"at": at_attribute_map[key](self.api)}
