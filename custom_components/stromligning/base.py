@@ -54,6 +54,7 @@ def build_price_attributes(
     prices: list[dict[str, Any]],
     value_getter: PriceValueGetter,
     aggregation: str,
+    extra_value_getters: dict[str, PriceValueGetter] | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """Build price attributes with deterministic period boundaries."""
     if not prices:
@@ -67,12 +68,15 @@ def build_price_attributes(
             if index < len(prices) - 1
             else _get_final_period_end(prices, aggregation)
         )
-        price_set.append(
-            {
-                "price": value_getter(price),
-                "start": price["date"],
-                "end": end,
-            }
-        )
+        interval = {
+            "price": value_getter(price),
+            "start": price["date"],
+            "end": end,
+        }
+        if extra_value_getters:
+            interval.update(
+                {name: getter(price) for name, getter in extra_value_getters.items()}
+            )
+        price_set.append(interval)
 
     return {"prices": price_set}
