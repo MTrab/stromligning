@@ -18,6 +18,7 @@ from .const import (
     CONF_FORECASTS,
     DOMAIN,
 )
+from .location import home_coordinates
 
 
 def configuration_identity(options: dict) -> str:
@@ -56,9 +57,8 @@ def schema(companies, options):
 async def discover(hass):
     """Resolve supplier and products with the blocking library in the executor."""
     api = Stromligning(False)
-    await hass.async_add_executor_job(
-        api.set_location, hass.config.latitude, hass.config.longitude
-    )
+    latitude, longitude = home_coordinates(hass)
+    await hass.async_add_executor_job(api.set_location, latitude, longitude)
     if not api.supplier or not api.available_companies:
         raise InvalidAPIResponse("No suppliers or products at this location")
     return api

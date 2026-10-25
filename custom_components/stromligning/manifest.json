@@ -8,6 +8,9 @@
         "@MTrab"
     ],
     "config_flow": true,
+    "dependencies": [
+        "zone"
+    ],
     "documentation": "https://github.com/MTrab/stromligning/blob/master/README.md",
     "iot_class": "cloud_polling",
     "issue_tracker": "https://github.com/MTrab/stromligning/issues",
