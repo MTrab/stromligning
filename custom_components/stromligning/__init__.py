@@ -1,148 +1,79 @@
-"""Add support for Stromligning energy prices."""
+"""Set up the Strømligning HACS integration."""
 
-import logging
-from datetime import datetime
 from random import randint
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import (
-    async_track_time_change,
-    async_track_utc_time_change,
-)
-from homeassistant.loader import async_get_integration
-from homeassistant.util import slugify as util_slugify
-from pystromligning import Aggregation
-from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
+from homeassistant.util import dt as dt_utils
 
 from .api import StromligningAPI
-from .const import DOMAIN, PLATFORMS, STARTUP, UPDATE_SIGNAL
+from .const import PLATFORMS
+from .coordinator import StromligningConfigEntry, StromligningCoordinator
 
-LOGGER = logging.getLogger(__name__)
+
+def _entry_identity(hass: HomeAssistant, entry: StromligningConfigEntry) -> str:
+    """Keep existing duplicate entries separate during migration and reload."""
+    from .config_flow import configuration_identity
+
+    identity = configuration_identity(entry.options)
+    if any(
+        other.entry_id != entry.entry_id and other.unique_id == identity
+        for other in hass.config_entries.async_entries(entry.domain)
+    ):
+        return f"{identity}:legacy:{entry.entry_id}"
+    return identity
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Strømligning from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
-    integration = await async_get_integration(hass, DOMAIN)
-    LOGGER.info(STARTUP, integration.version)
-    rand_min = randint(5, 40)
-    rand_sec = randint(0, 59)
+async def async_setup_entry(
+    hass: HomeAssistant, entry: StromligningConfigEntry
+) -> bool:
+    """Load one entry with HA-managed retry and cleanup."""
+    previous = getattr(entry, "runtime_data", None)
+    if (
+        previous is not None
+        and previous.rate_limit_until is not None
+        and dt_utils.utcnow() < previous.rate_limit_until
+    ):
+        raise ConfigEntryNotReady("API rate limit; waiting for the retry deadline")
+    hass.config_entries.async_update_entry(
+        entry, unique_id=_entry_identity(hass, entry)
+    )
+    api = StromligningAPI(hass, entry, randint(5, 40), randint(0, 59))
+    coordinator = StromligningCoordinator(hass, entry, api)
+    entry.runtime_data = coordinator
+    entry.async_on_unload(coordinator.close)
+    await coordinator.async_config_entry_first_refresh()
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    coordinator.start()
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+    return True
 
-    api = StromligningAPI(hass, entry, rand_min, rand_sec)
-    hass.data[DOMAIN][entry.entry_id] = api
 
-    forecasts = entry.options.get("forecasts", False)
-    aggregation = entry.options.get("aggregation", Aggregation.HOUR)
-
-    try:
-        await api.set_location()
-        await api.update_prices()
-        await api.prepare_data()
-
-        async def get_new_data(n):  # type: ignore pylint: disable=unused-argument, invalid-name
-            """Fetch new data for tomorrows prices at 13:00ish CET."""
-            LOGGER.debug("Getting latest dataset")
-
-            await api.update_prices()
-            await api.prepare_data()
-
-            async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
-
-        async def new_day(n):  # type: ignore pylint: disable=unused-argument, invalid-name
-            """Handle data on new day."""
-            LOGGER.debug("New day function called")
-
-            if len(api.prices_tomorrow) > 0:
-                api.prices_today = api.prices_tomorrow
-                api.prices_tomorrow = []
-                api.tomorrow_available = False
-            else:
-                await api.update_prices()
-                await api.prepare_data()
-
-            async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
-
-        async def new_quarter(n):  # type: ignore pylint: disable=unused-argument, invalid-name
-            """Tell the sensor to update to a new quarter."""
-            LOGGER.debug("New quarter, updating state")
-
-            if len(api.prices_tomorrow) == 0 and datetime.now().hour > 13:
-                LOGGER.info(
-                    "Prices for tomorrow is missing - trying to fetch data from API"
-                )
-                await api.update_prices()
-                await api.prepare_data()
-
-            async_dispatcher_send(hass, util_slugify(UPDATE_SIGNAL))
-
-        # Handle dataset updates
-        update_tomorrow = async_track_time_change(
-            hass,
-            get_new_data,
-            hour=13,  # LOCAL time!!
-            minute=rand_min,
-            second=rand_sec,
-        )
-
-        if forecasts:
-            update_forecast = async_track_utc_time_change(
-                hass, get_new_data, hour="/6", minute=10, second=0  # UTC time!!
-            )
-            api.listeners.append(update_forecast)
-
-        if aggregation == Aggregation.MIN15:
-            update_new_quarter = async_track_time_change(
-                hass, new_quarter, minute="/15", second=1
-            )
-        else:
-            update_new_quarter = async_track_time_change(
-                hass, new_quarter, hour="/1", minute=0, second=1
-            )
-
-        update_new_day = async_track_time_change(
-            hass, new_day, hour=0, minute=0, second=1
-        )
-
-        api.listeners.append(update_new_quarter)
-        api.listeners.append(update_new_day)
-        api.listeners.append(update_tomorrow)
-
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
+async def async_unload_entry(
+    hass: HomeAssistant, entry: StromligningConfigEntry
+) -> bool:
+    """Unload all platforms and stop callbacks only when unloading succeeds."""
+    if await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        entry.runtime_data.close()
         return True
-    except TooManyRequests:
-        raise ConfigEntryNotReady("Too many requests to the API within 15 minutes")
-        # LOGGER.info(
-        #     "You made too many requests to the API within a 15 minutes window - try again later"
-        # )
-
-        # return False
-    except InvalidAPIResponse as ex:
-        LOGGER.error("Unable to connect to the Stromligning API: %s", ex)
-        raise ConfigEntryNotReady from ex
-
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
-    for platform in PLATFORMS:
-        unload_ok = await hass.config_entries.async_forward_entry_unload(
-            entry, platform
-        )
-
-    if unload_ok:
-        for unsub in hass.data[DOMAIN][entry.entry_id].listeners:
-            unsub()
-        hass.data[DOMAIN].pop(entry.entry_id)
-
-        return True
-
     return False
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload config entry."""
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)
+async def async_reload_entry(
+    hass: HomeAssistant, entry: StromligningConfigEntry
+) -> None:
+    """Reload options through Home Assistant's lifecycle."""
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_migrate_entry(
+    hass: HomeAssistant, entry: StromligningConfigEntry
+) -> bool:
+    """Upgrade identity while preserving entry, device, entity, data and options."""
+    if entry.version > 2:
+        return False
+    if entry.version == 1:
+        hass.config_entries.async_update_entry(
+            entry, unique_id=_entry_identity(hass, entry), version=2
+        )
+    return True

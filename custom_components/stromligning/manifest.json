@@ -8,11 +8,14 @@
         "@MTrab"
     ],
     "config_flow": true,
+    "dependencies": [
+        "zone"
+    ],
     "documentation": "https://github.com/MTrab/stromligning/blob/master/README.md",
     "iot_class": "cloud_polling",
     "issue_tracker": "https://github.com/MTrab/stromligning/issues",
     "requirements": [
         "pystromligning==0.1.4"
     ],
-    "version": "1.1.3"
+    "version": "1.1.4"
 }

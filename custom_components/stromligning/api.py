@@ -1,20 +1,18 @@
 """API connector for Stromligning."""
 
+from copy import deepcopy
 import logging
+import math
 from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_utils
-from homeassistant.util import slugify as util_slugify
 from pystromligning import Stromligning
-from pystromligning.exceptions import TooManyRequests
+from pystromligning.exceptions import InvalidAPIResponse
 
-from .const import CONF_AGGREGATION, CONF_COMPANY, CONF_FORECASTS, UPDATE_SIGNAL_NEXT
-
-RETRY_MINUTES = 5
-MAX_RETRY_MINUTES = 60
+from .const import CONF_AGGREGATION, CONF_COMPANY, CONF_FORECASTS
+from .location import home_coordinates
 
 LOGGER = logging.getLogger(__name__)
 
@@ -39,21 +37,20 @@ class StromligningAPI:
 
         self.tomorrow_available: bool = False
 
-        self.listeners = []
+        self.prices_forecasts = []
+        self.forecast_data = False
+        self._snapshot = []
+        self.scheduled_update = None
 
         self.last_update: datetime | None = None
 
     async def set_location(self) -> None:
         """Set the location."""
-        LOGGER.debug(
-            "Setting location to %s, %s",
-            self.hass.config.latitude,
-            self.hass.config.longitude,
-        )
+        latitude, longitude = home_coordinates(self.hass)
         await self.hass.async_add_executor_job(
             self._data.set_location,
-            self.hass.config.latitude,
-            self.hass.config.longitude,
+            latitude,
+            longitude,
         )
 
         LOGGER.debug(
@@ -61,6 +58,8 @@ class StromligningAPI:
             self._entry.options.get(CONF_COMPANY),
         )
         self._data.set_company(str(self._entry.options.get(CONF_COMPANY)))
+        if not self._data.company or not self._data.supplier:
+            raise InvalidAPIResponse("No matching supplier or product")
 
         LOGGER.debug(
             "Setting aggregation to %s",
@@ -83,156 +82,140 @@ class StromligningAPI:
             .isoformat()
             .replace("+00:00", ".000Z")
         )
+        await self.hass.async_add_executor_job(self._data.update, today_midnight_utc)
+        snapshot = deepcopy(self._data.prices)
         try:
-            await self.hass.async_add_executor_job(
-                self._data.update, today_midnight_utc
-            )
-            self.last_update = dt_utils.now()
-        except TooManyRequests:
-            LOGGER.info(
-                "You made too many requests to the API within a 15 minutes window - try again later"
-            )
+            for price in snapshot:
+                value = price["date"]
+                start = (
+                    datetime.fromisoformat(value) if isinstance(value, str) else value
+                )
+                if start.tzinfo is None:
+                    raise ValueError("Naive price timestamp")
+                price["date"] = dt_utils.as_local(start)
+                amounts = [price["price"]]
+                amounts.extend(
+                    price["details"][key]
+                    for key in (
+                        "electricity",
+                        "electricityTax",
+                        "surcharge",
+                        "distribution",
+                    )
+                )
+                amounts.extend(
+                    price["details"]["transmission"][key]
+                    for key in ("systemTariff", "netTariff")
+                )
+                for amount in amounts:
+                    for key in ("value", "total"):
+                        if isinstance(amount[key], bool) or not isinstance(
+                            amount[key], (int, float)
+                        ):
+                            raise TypeError("Non-numeric price")
+                        if not math.isfinite(amount[key]):
+                            raise ValueError("Non-finite price")
+            snapshot.sort(key=lambda price: dt_utils.as_utc(price["date"]))
+            starts = [dt_utils.as_utc(price["date"]) for price in snapshot]
+            if len(starts) != len(set(starts)):
+                raise ValueError("Duplicate periods")
+        except (KeyError, TypeError, ValueError, AttributeError) as err:
+            raise InvalidAPIResponse("Invalid price dataset") from err
+        if self._find_period(snapshot, dt_utils.as_utc(dt_utils.now())) is None:
+            raise InvalidAPIResponse("No price for the current period")
+        self._snapshot = snapshot
+        await self.prepare_data()
+        self.last_update = dt_utils.now()
 
     async def prepare_data(self) -> None:
-        """Prepare the data for use in Home Assistant."""
-        LOGGER.debug("Preparing data")
-
-        today_midnight_utc = dt_utils.as_utc(
-            dt_utils.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        """Rebucket the last successful snapshot without mutating library data."""
+        midnight = dt_utils.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today, tomorrow, day3 = (
+            dt_utils.as_utc(midnight + timedelta(days=offset)) for offset in range(3)
         )
-        tomorrow_midnight_utc = dt_utils.as_utc(
-            (dt_utils.now() + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        self.prices_today = [
+            price
+            for price in self._snapshot
+            if today <= dt_utils.as_utc(price["date"]) < tomorrow
+        ]
+        self.prices_tomorrow = [
+            price
+            for price in self._snapshot
+            if tomorrow <= dt_utils.as_utc(price["date"]) < day3
+        ]
+        self.prices_forecasts = [
+            price for price in self._snapshot if dt_utils.as_utc(price["date"]) >= day3
+        ]
+        self.forecast_data = any(
+            price.get("forecast", False) for price in self.prices_tomorrow
         )
-        day3_midnight_utc = dt_utils.as_utc(
-            (dt_utils.now() + timedelta(days=2)).replace(hour=0, minute=0, second=0, microsecond=0)
+        interval = self.period_length
+        expected = [
+            tomorrow + index * interval
+            for index in range((day3 - tomorrow) // interval)
+        ]
+        actual = [dt_utils.as_utc(price["date"]) for price in self.prices_tomorrow]
+        self.tomorrow_available = actual == expected and not self.forecast_data
+        if not self.tomorrow_available and not self.forecast_data:
+            self.prices_tomorrow = []
+
+    @property
+    def period_length(self) -> timedelta:
+        """Return the configured elapsed period length."""
+        return timedelta(minutes=15 if self.get_aggregation() == "15m" else 60)
+
+    def _find_period(self, prices: list, instant: datetime) -> dict | None:
+        """Find a half-open interval in UTC, including repeated local hours."""
+        return next(
+            (
+                price
+                for price in prices
+                if dt_utils.as_utc(price["date"])
+                <= instant
+                < dt_utils.as_utc(price["date"]) + self.period_length
+            ),
+            None,
         )
 
-        self.prices_today = []
-        self.prices_tomorrow = []
-        self.prices_forecasts = []
+    def current_period(self) -> dict | None:
+        """Return the current interval, never an expired matching clock hour."""
+        return self._find_period(self.prices_today, dt_utils.as_utc(dt_utils.now()))
 
-        self.forecast_data: bool = False
+    def _current_value(self, path: tuple[str, ...], vat: bool) -> float | None:
+        """Read a component from the current interval."""
+        price = self.current_period()
+        if price is None:
+            return None
+        for key in path:
+            price = price[key]
+        return price["total" if vat else "value"]
 
-        for price in self._data.prices:
-            # Convert the price date to datetime first
-            price_dt = datetime.fromisoformat(price["date"])
-
-            if today_midnight_utc <= price_dt < tomorrow_midnight_utc:
-                price["date"] = dt_utils.as_local(price_dt)
-                self.prices_today.append(price)
-            elif tomorrow_midnight_utc <= price_dt < day3_midnight_utc:
-                price["date"] = dt_utils.as_local(price_dt)
-                self.prices_tomorrow.append(price)
-                if price.get("forecast", False):
-                    self.forecast_data = True
-            else:
-                price["date"] = dt_utils.as_local(price_dt)
-                self.prices_forecasts.append(price)
-
-        LOGGER.debug("Found %s entries for tomorrow", len(self.prices_tomorrow))
-        if len(self.prices_tomorrow) >= 23 and not self.forecast_data:
-            LOGGER.debug("Prices for tomorrow are valid")
-            self.tomorrow_available = True
-        else:
-            LOGGER.debug("Prices for tomorrow are NOT valid")
-            if not self.forecast_data:
-                LOGGER.debug("Clearing prices for tomorrow")
-                self.prices_tomorrow = []
-            self.tomorrow_available = False
-        async_dispatcher_send(self.hass, util_slugify(UPDATE_SIGNAL_NEXT))
-
-    def get_current(self, vat: bool = True) -> str | None:
-        """Get the current price"""
-        for price in self.prices_today:
-            if not price["date"].hour == dt_utils.now().hour:
-                continue
-
-            if (
-                price["date"].hour == dt_utils.now().hour
-                and len(self.prices_today) == 24
-            ) or (
-                price["date"].minute <= dt_utils.now().minute
-                and (
-                    (price["date"] + timedelta(minutes=15)).minute
-                    > dt_utils.now().minute
-                    or (price["date"] + timedelta(minutes=15)).minute == 0
-                )
-            ):
-                LOGGER.debug(
-                    "Returning '%s' as current price",
-                    (price["price"]["total"] if vat else price["price"]["value"]),
-                )
-                return price["price"]["total"] if vat else price["price"]["value"]
+    def get_current(self, vat: bool = True) -> float | None:
+        """Return the current total price."""
+        return self._current_value(("price",), vat)
 
     def get_forecasts(self, vat: bool = True) -> datetime | None:
-        """Get forecasts"""
+        """Get forecasts."""
 
         return self.last_update
 
-    def get_spot(self, vat: bool = True, tomorrow: bool = False) -> str | None:
-        """Get spotprice"""
-        for price in self.prices_today if not tomorrow else self.prices_tomorrow:
-            if not price["date"].hour == dt_utils.now().hour:
-                continue
+    def get_spot(self, vat: bool = True, tomorrow: bool = False) -> float | None:
+        """Return the current or corresponding tomorrow spot price."""
+        if tomorrow:
+            price = self._find_period(
+                self.prices_tomorrow,
+                dt_utils.as_utc(dt_utils.now() + timedelta(days=1)),
+            )
+            return (
+                price["details"]["electricity"]["total" if vat else "value"]
+                if price
+                else None
+            )
+        return self._current_value(("details", "electricity"), vat)
 
-            if (
-                price["date"].hour == dt_utils.now().hour
-                and len(self.prices_today if not tomorrow else self.prices_tomorrow)
-                == 24
-            ) or (
-                price["date"].minute <= dt_utils.now().minute
-                and (
-                    (price["date"] + timedelta(minutes=15)).minute
-                    > dt_utils.now().minute
-                    or (price["date"] + timedelta(minutes=15)).minute == 0
-                )
-            ):
-
-                LOGGER.debug(
-                    "Returning '%s' as current spotprice",
-                    (
-                        price["details"]["electricity"]["total"]
-                        if vat
-                        else price["details"]["electricity"]["value"]
-                    ),
-                )
-                return (
-                    price["details"]["electricity"]["total"]
-                    if vat
-                    else price["details"]["electricity"]["value"]
-                )
-
-    def get_electricitytax(self, vat: bool = True) -> str | None:
-        """Get electricity tax"""
-        for price in self.prices_today:
-            if not price["date"].hour == dt_utils.now().hour:
-                continue
-
-            if (
-                price["date"].hour == dt_utils.now().hour
-                and len(self.prices_today) == 24
-            ) or (
-                price["date"].minute <= dt_utils.now().minute
-                and (
-                    (price["date"] + timedelta(minutes=15)).minute
-                    > dt_utils.now().minute
-                    or (price["date"] + timedelta(minutes=15)).minute == 0
-                )
-            ):
-
-                LOGGER.debug(
-                    "Returning '%s' as current electricity tax",
-                    (
-                        price["details"]["electricityTax"]["total"]
-                        if vat
-                        else price["details"]["electricityTax"]["value"]
-                    ),
-                )
-                return (
-                    price["details"]["electricityTax"]["total"]
-                    if vat
-                    else price["details"]["electricityTax"]["value"]
-                )
+    def get_electricitytax(self, vat: bool = True) -> float | None:
+        """Return the current tax."""
+        return self._current_value(("details", "electricityTax"), vat)
 
     def mean(self, data: list, vat: bool = True) -> float | None:
         """Calculate mean value of list."""
@@ -259,7 +242,9 @@ class StromligningAPI:
             if not full_day:
                 dataset: list = []
                 for price in self.prices_today:
-                    if price["date"] >= dt_utils.now():
+                    if dt_utils.as_utc(price["date"]) >= dt_utils.as_utc(
+                        dt_utils.now()
+                    ):
                         dataset.append(price)
             else:
                 dataset = self.prices_today
@@ -308,24 +293,13 @@ class StromligningAPI:
             return None
 
     def get_next_update(self) -> datetime:
-        """Get next API update timestamp."""
-        n_update = self.next_update.split(":")
-
-        data_refresh = dt_utils.now().replace(
-            hour=int(n_update[0]),
-            minute=int(n_update[1]),
-            second=int(n_update[2]),
-            microsecond=0,
-        )
-
-        if dt_utils.now() > data_refresh and self.tomorrow_available is False:
-            data_refresh = data_refresh.replace(
-                hour=dt_utils.now().hour + 1, minute=0, second=2
-            )
-        elif dt_utils.now().hour > 13:
-            data_refresh = data_refresh + timedelta(days=1)
-
-        return data_refresh
+        """Return the actual scheduled API attempt."""
+        if self.scheduled_update is not None:
+            return dt_utils.as_local(self.scheduled_update)
+        hour, minute, second = map(int, self.next_update.split(":"))
+        now = dt_utils.now()
+        scheduled = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
+        return scheduled if scheduled > now else scheduled + timedelta(days=1)
 
     def get_net_owner(self) -> str:
         """Get net operator."""
@@ -334,101 +308,19 @@ class StromligningAPI:
     def get_power_provider(self) -> str:
         """Get power provider."""
         return self._data.company["name"]
-    
+
     def get_aggregation(self) -> str:
         """Get configured price aggregation."""
         return str(self._entry.options.get(CONF_AGGREGATION, "1h"))
 
     def get_surcharge(self, vat: bool = True) -> float | None:
-        """Get surcharge from API."""
-        for price in self.prices_today:
-            if not price["date"].hour == dt_utils.now().hour:
-                continue
-
-            if (
-                price["date"].hour == dt_utils.now().hour
-                and len(self.prices_today) == 24
-            ) or (
-                price["date"].minute <= dt_utils.now().minute
-                and (
-                    (price["date"] + timedelta(minutes=15)).minute
-                    > dt_utils.now().minute
-                    or (price["date"] + timedelta(minutes=15)).minute == 0
-                )
-            ):
-                LOGGER.debug(
-                    "Returning '%s' as current surcharge",
-                    (
-                        price["details"]["surcharge"]["total"]
-                        if vat
-                        else price["details"]["surcharge"]["value"]
-                    ),
-                )
-                return (
-                    price["details"]["surcharge"]["total"]
-                    if vat
-                    else price["details"]["surcharge"]["value"]
-                )
+        """Return the current surcharge."""
+        return self._current_value(("details", "surcharge"), vat)
 
     def get_transmission_tariff(self, tariff: str, vat: bool = True) -> float | None:
-        """Get transmission tariff from API."""
-        for price in self.prices_today:
-            if not price["date"].hour == dt_utils.now().hour:
-                continue
-
-            if (
-                price["date"].hour == dt_utils.now().hour
-                and len(self.prices_today) == 24
-            ) or (
-                price["date"].minute <= dt_utils.now().minute
-                and (
-                    (price["date"] + timedelta(minutes=15)).minute
-                    > dt_utils.now().minute
-                    or (price["date"] + timedelta(minutes=15)).minute == 0
-                )
-            ):
-                LOGGER.debug(
-                    "Returning '%s' as current %s tariff",
-                    (
-                        price["details"]["transmission"][tariff]["total"]
-                        if vat
-                        else price["details"]["transmission"][tariff]["value"]
-                    ),
-                    tariff,
-                )
-                return (
-                    price["details"]["transmission"][tariff]["total"]
-                    if vat
-                    else price["details"]["transmission"][tariff]["value"]
-                )
+        """Return a current transmission tariff."""
+        return self._current_value(("details", "transmission", tariff), vat)
 
     def get_distribution(self, vat: bool = True) -> float | None:
-        """Get distribution from API."""
-        for price in self.prices_today:
-            if not price["date"].hour == dt_utils.now().hour:
-                continue
-
-            if (
-                price["date"].hour == dt_utils.now().hour
-                and len(self.prices_today) == 24
-            ) or (
-                price["date"].minute <= dt_utils.now().minute
-                and (
-                    (price["date"] + timedelta(minutes=15)).minute
-                    > dt_utils.now().minute
-                    or (price["date"] + timedelta(minutes=15)).minute == 0
-                )
-            ):
-                LOGGER.debug(
-                    "Returning '%s' as current distribution value",
-                    (
-                        price["details"]["distribution"]["total"]
-                        if vat
-                        else price["details"]["distribution"]["value"]
-                    ),
-                )
-                return (
-                    price["details"]["distribution"]["total"]
-                    if vat
-                    else price["details"]["distribution"]["value"]
-                )
+        """Return the current distribution price."""
+        return self._current_value(("details", "distribution"), vat)

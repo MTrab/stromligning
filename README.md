@@ -9,6 +9,8 @@ Stromligning for Home Assistant integrates Day Ahead spotprices for electricity,
 
 The integration automatically recognises tariff settings from the Home Assistant home location coordinates and allows you to select your electricity vendor.
 
+Requires Home Assistant 2024.12.0 or newer.
+
 ## Table of Content
 
 [**Installation**](#installation)
@@ -43,6 +45,31 @@ My Home Assistant shortcut:
 Or go to Home Assistant > Settings > Integrations
 
 Add "Stromligning" integration _(If it doesn't show, try CTRL+F5 to force a refresh of the page)_
+
+## Spot price forecasts
+
+Enable forecasts in the integration options to create `forecasts_spotprice_vat`
+and `forecasts_spotprice_ex_vat`. The VAT-exclusive sensor is disabled by default;
+enable it in the entity settings if needed.
+
+Like the existing forecast sensors, their state is the last successful update
+time. Their `prices` attribute contains intervals with `price`, `start`, and
+`end`. Here, `price` is the electricity spot price in DKK/kWh, including or
+excluding VAT. Tariffs, taxes, and supplier surcharges are excluded.
+
+The sensors use the same forecast periods as `forecasts_vat` and
+`forecasts_ex_vat`, starting the day after tomorrow. An empty forecast produces
+an empty `prices` list.
+
+For an EMHASS price list, use the VAT-exclusive sensor's `price` values:
+
+```jinja
+{{ state_attr('sensor.stromligning_forecasts_spotprice_ex_vat', 'prices')
+   | map(attribute='price') | list }}
+```
+
+Replace the entity ID with the one from your installation and select the periods
+required by your EMHASS configuration.
 
 ## Use the custom template to show the next x cheapest hours
 

@@ -6,16 +6,17 @@ import logging
 
 from homeassistant.components import binary_sensor
 from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.util import slugify as util_slugify
-from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
-from .api import StromligningAPI
-from .base import StromligningBinarySensorEntityDescription, build_price_attributes
-from .const import ATTR_FORECAST_DATA, ATTR_PRICES, DOMAIN, UPDATE_SIGNAL
+from .coordinator import StromligningConfigEntry
+from .base import (
+    StromligningEntity,
+    StromligningBinarySensorEntityDescription,
+    build_price_attributes,
+)
+from .const import ATTR_FORECAST_DATA, ATTR_PRICES, DOMAIN
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ BINARY_SENSORS = [
 ]
 
 
-async def async_setup_entry(hass, entry: ConfigEntry, async_add_devices):
+async def async_setup_entry(hass, entry: StromligningConfigEntry, async_add_devices):
     """Set up binary sensors."""
     binary_sensors = []
 
@@ -74,7 +75,7 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_devices):
     async_add_devices(binary_sensors)
 
 
-class StromligningBinarySensor(BinarySensorEntity):
+class StromligningBinarySensor(StromligningEntity, BinarySensorEntity):
     """Representation of a Stromligning Binary_Sensor."""
 
     _unrecorded_attributes = frozenset({ATTR_PRICES})
@@ -86,20 +87,20 @@ class StromligningBinarySensor(BinarySensorEntity):
         self,
         description: StromligningBinarySensorEntityDescription,
         hass: HomeAssistant,
-        entry: ConfigEntry,
+        entry: StromligningConfigEntry,
     ) -> None:
         """Initialize a Stromligning Binary_Sensor."""
-        super().__init__()
+        super().__init__(entry.runtime_data)
 
         self.entity_description: StromligningBinarySensorEntityDescription = description
         self._config = entry
         self._hass = hass
-        self.api: StromligningAPI = hass.data[DOMAIN][entry.entry_id]
+        self.api = entry.runtime_data.api
 
         self._attr_unique_id = util_slugify(
             f"{self.entity_description.key}_{self._config.entry_id}"
         )
-        self._attr_should_poll = True
+        self._attr_should_poll = False
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, self._config.entry_id)},
@@ -107,19 +108,13 @@ class StromligningBinarySensor(BinarySensorEntity):
             "manufacturer": "Strømligning",
         }
 
-        async_dispatcher_connect(
-            self._hass,
-            util_slugify(UPDATE_SIGNAL),
-            self.handle_update,
-        )
-
         self.entity_id = binary_sensor.ENTITY_ID_FORMAT.format(
             util_slugify(
                 f"{self._config.data.get(CONF_NAME)}_{self.entity_description.key}"
             )
         )
 
-    async def handle_attributes(self) -> None:
+    def handle_attributes(self) -> None:
         """Handle attributes."""
         key = self.entity_description.key
         price_attribute_map = {
@@ -144,31 +139,14 @@ class StromligningBinarySensor(BinarySensorEntity):
                 ),
             }
 
-    async def handle_update(self) -> None:
-        """Handle data update."""
-        try:
-            self._attr_is_on = self.entity_description.value_fn(
-                self._hass.data[DOMAIN][self._config.entry_id]
-            )  # type: ignore
-            LOGGER.debug(
-                "Setting value for '%s' to: %s",
-                self.entity_id,
-                self._attr_is_on,
-            )
-            await self.handle_attributes()
-            self._attr_available = True
-        except TooManyRequests:
-            if self._attr_available:
-                LOGGER.warning(
-                    "You made too many requests to the API and have been banned for 15 minutes."
-                )
-            self._attr_available = False
-        except InvalidAPIResponse:
-            if self._attr_available:
-                LOGGER.error("The Stromligning API made an invalid response.")
-            self._attr_available = False
+    @callback
+    def handle_update(self) -> None:
+        """Refresh the cached value and public attributes."""
+        self._attr_is_on = self.entity_description.value_fn(self.api)
+        self.handle_attributes()
+        self.async_write_ha_state()
 
     async def async_added_to_hass(self):
-        """Fetch initial state when the entity is added to Home Assistant."""
-        await self.handle_update()
-        return await super().async_added_to_hass()
+        """Subscribe only while added and populate the initial state."""
+        await super().async_added_to_hass()
+        self.handle_update()

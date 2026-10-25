@@ -1,15 +1,16 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Integration med samme navn eksisterer allerede"
+            "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret"
         },
         "error": {
-            "too_many_requests": "For mange API-forespørgsler – prøv igen om 15 minutter"
+            "too_many_requests": "For mange API-forespørgsler – prøv igen om 15 minutter",
+            "cannot_connect": "Kunne ikke hente gyldige priser eller produkter. Kontrollér lokationen, og prøv igen.",
+            "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret"
         },
         "step": {
             "user": {
                 "data": {
-                    "name": "Navn til integrationen",
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)"
@@ -19,10 +20,12 @@
     },
     "options": {
         "abort": {
-            "already_configured": "Integration med samme navn eksisterer allerede"
+            "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret"
         },
         "error": {
-            "too_many_requests": "For mange API-forespørgsler – prøv igen om 15 minutter"
+            "too_many_requests": "For mange API-forespørgsler – prøv igen om 15 minutter",
+            "cannot_connect": "Kunne ikke hente gyldige priser eller produkter. Kontrollér lokationen, og prøv igen.",
+            "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret"
         },
         "step": {
             "init": {
@@ -85,6 +88,22 @@
                 "state_attributes": {
                     "prices": {
                         "name": "Priser den næste uge"
+                    }
+                }
+            },
+            "forecasts_spotprice_vat": {
+                "name": "Spotprisudsigt inkl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Spotpriser den næste uge"
+                    }
+                }
+            },
+            "forecasts_spotprice_ex_vat": {
+                "name": "Spotprisudsigt ekskl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Spotpriser den næste uge"
                     }
                 }
             },
