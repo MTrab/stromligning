@@ -23,6 +23,4 @@ Library requests have a 60-second timeout. The library also supports
 `https://staging.stromligning.dk/api` for development; this integration uses the
 production API.
 
-The manifest and test requirements temporarily pin the merged `pystromligning`
-commit `c0c1bd810887b8edefb93def1a7ae8bb9f9909ac`. Before merging the
-integration, replace both references with the released library version.
+The manifest and test requirements use `pystromligning==0.2.0` from PyPI.

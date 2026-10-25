@@ -5,4 +5,4 @@ pytest-asyncio==1.3.0
 pytest-cov==7.1.0
 pip>=26.2.1,<26.3
 ruff==0.17.1
-pystromligning@git+https://github.com/MTrab/pystromligning.git@c0c1bd810887b8edefb93def1a7ae8bb9f9909ac
+pystromligning==0.2.0
