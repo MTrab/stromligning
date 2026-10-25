@@ -12,6 +12,7 @@ from homeassistant import config_entries, loader
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_utils
+from pystromligning import Stromligning
 from pystromligning.exceptions import TooManyRequests
 
 from custom_components.stromligning.const import DOMAIN
@@ -1016,3 +1017,79 @@ async def test_spot_forecasts_during_fetch_and_rollover(
     assert total.attributes["prices"][0]["price"] == -5
     assert set(total.attributes["prices"][0]) == {"price", "start", "end"}
     assert library.update.call_count == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("existing", [False, True])
+async def test_agreement_description_preserves_names(
+    integration_hass, library, existing
+):
+    """Keep agreement details in the model without changing device or entity names."""
+    hass = integration_hass
+    options = {"company": "product", "aggregation": "1h", "forecasts": False}
+    if existing:
+        entry = legacy_entry()
+        with patch.object(
+            hass.config_entries, "async_setup", AsyncMock(return_value=False)
+        ):
+            await hass.config_entries.async_add(entry)
+        hass.config_entries.async_update_entry(
+            entry, title="Strømligning", data={"name": "Strømligning"}
+        )
+        dr.async_get(hass).async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, entry.entry_id)},
+            name="Strømligning",
+        )
+        await add_entry(hass, entry)
+    else:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": "user"}, data=options
+        )
+        assert result["title"] == "Strømligning"
+        entry = result["result"]
+        await hass.async_block_till_done()
+    devices = dr.async_get(hass)
+    device = devices.async_get_device_by_identifier(
+        (DOMAIN, entry.entry_id), entry.entry_id
+    )
+    assert device.name == "Strømligning"
+    assert device.model == "Provider - Product (1h, forecasts disabled)"
+    assert entry.title == device.name
+    registry = er.async_get(hass)
+    original_ids = set(registry.entities)
+    for entity in registry.entities.values():
+        assert entity.device_id == device.id
+        assert "provider_product" not in entity.entity_id
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(
+        result["flow_id"], {**options, "aggregation": "15m", "forecasts": True}
+    )
+    await hass.async_block_till_done()
+    updated = devices.async_get(device.id)
+    assert updated.name == device.name
+    assert updated.model == "Provider - Product (15m, forecasts enabled)"
+    assert entry.title == device.name
+    assert original_ids <= set(registry.entities)
+
+    devices.async_update_device(device.id, name_by_user="My electricity")
+    hass.config_entries.async_update_entry(entry, title="My integration")
+    original_location = Stromligning.set_location
+
+    def changed_product(client, latitude, longitude):
+        original_location(client, latitude, longitude)
+        client.available_companies[1]["name"] = "Another agreement"
+
+    with patch("pystromligning.Stromligning.set_location", changed_product):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], {**options, "company": "other"}
+        )
+        await hass.async_block_till_done()
+    updated = devices.async_get(device.id)
+    assert updated.name == device.name
+    assert updated.name_by_user == "My electricity"
+    assert entry.title == "My integration"
+    assert updated.model == "Another agreement (1h, forecasts disabled)"
+    assert original_ids <= set(registry.entities)
