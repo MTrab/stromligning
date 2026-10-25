@@ -46,6 +46,12 @@ Or go to Home Assistant > Settings > Integrations
 
 Add "Stromligning" integration _(If it doesn't show, try CTRL+F5 to force a refresh of the page)_
 
+The device's model field shows the electricity agreement name, price interval,
+and forecast setting, for example `Provider - Product (1h, forecasts disabled)`.
+These details update when options change. Device names, integration titles,
+and entity IDs do not include the agreement or settings. Existing names and
+entity IDs are preserved.
+
 ## Spot price forecasts
 
 Enable forecasts in the integration options to create `forecasts_spotprice_vat`

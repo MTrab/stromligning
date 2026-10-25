@@ -10,6 +10,7 @@ from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.util import slugify as util_slugify
 
+from .naming import configuration_description, device_name
 from .coordinator import StromligningConfigEntry
 from .base import (
     StromligningEntity,
@@ -104,7 +105,10 @@ class StromligningBinarySensor(StromligningEntity, BinarySensorEntity):
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, self._config.entry_id)},
-            "name": self._config.data.get(CONF_NAME),
+            "name": device_name(hass, entry),
+            "model": configuration_description(
+                self.api.get_power_provider(), self._config.options
+            ),
             "manufacturer": "Strømligning",
         }
 
