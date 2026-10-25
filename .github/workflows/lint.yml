@@ -27,7 +27,7 @@ jobs:
         if: github.event_name == 'pull_request'
         id: changed
         run: |
-          git fetch origin "${{ github.base_ref }}" --depth=1
+          git fetch origin "${{ github.base_ref }}"
           python_files="$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- '*.py' '.ruff.toml')"
           {
             echo "python_files<<EOF"
