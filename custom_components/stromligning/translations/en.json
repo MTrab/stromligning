@@ -6,7 +6,8 @@
         "error": {
             "too_many_requests": "Too many requests to the API - try again in 15 minutes",
             "cannot_connect": "Unable to retrieve valid prices or products. Check the location and try again.",
-            "already_configured": "This product, resolution and forecast combination is already configured"
+            "already_configured": "This product, resolution and forecast combination is already configured",
+            "invalid_price": "Enter a finite price of zero or more."
         },
         "step": {
             "user": {
@@ -14,6 +15,13 @@
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
                     "forecasts": "Include price forecasts for the next week? (may be inaccurate)"
+                }
+            },
+            "fixed_price": {
+                "title": "Your fixed electricity price",
+                "description": "Enter the electricity price from your agreement, including VAT, without grid tariffs, taxes or subscription fees. Update it here when your agreement changes.",
+                "data": {
+                    "electricity_price": "Electricity price incl. VAT (kr/kWh)"
                 }
             }
         }
@@ -25,7 +33,8 @@
         "error": {
             "too_many_requests": "Too many requests to the API - try again in 15 minutes",
             "cannot_connect": "Unable to retrieve valid prices or products. Check the location and try again.",
-            "already_configured": "This product, resolution and forecast combination is already configured"
+            "already_configured": "This product, resolution and forecast combination is already configured",
+            "invalid_price": "Enter a finite price of zero or more."
         },
         "step": {
             "init": {
@@ -33,6 +42,13 @@
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
                     "forecasts": "Include price forecasts for the next week? (may be inaccurate)"
+                }
+            },
+            "fixed_price": {
+                "title": "Your fixed electricity price",
+                "description": "Enter the electricity price from your agreement, including VAT, without grid tariffs, taxes or subscription fees. Update it here when your agreement changes.",
+                "data": {
+                    "electricity_price": "Electricity price incl. VAT (kr/kWh)"
                 }
             }
         }
@@ -331,6 +347,17 @@
                     }
                 }
             }
+        }
+    },
+    "issues": {
+        "fixed_price_required": {
+            "title": "Fixed electricity price required",
+            "description": "The fixed-price agreement for {name} needs your agreed electricity price. Open Settings > Devices & services > Strømligning, select Configure for this entry and enter the price including VAT, without grid tariffs, taxes or subscription fees."
+        }
+    },
+    "exceptions": {
+        "fixed_price_required": {
+            "message": "Enter your agreed fixed electricity price in the integration options."
         }
     }
 }

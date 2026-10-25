@@ -3,11 +3,12 @@
 from random import randint
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.util import dt as dt_utils
 
 from .api import StromligningAPI
-from .const import PLATFORMS
+from .const import DOMAIN, PLATFORMS
 from .coordinator import StromligningConfigEntry, StromligningCoordinator
 
 
@@ -45,7 +46,6 @@ async def async_setup_entry(
     await coordinator.async_config_entry_first_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     coordinator.start()
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
 
 
@@ -59,13 +59,6 @@ async def async_unload_entry(
     return False
 
 
-async def async_reload_entry(
-    hass: HomeAssistant, entry: StromligningConfigEntry
-) -> None:
-    """Reload options through Home Assistant's lifecycle."""
-    await hass.config_entries.async_reload(entry.entry_id)
-
-
 async def async_migrate_entry(
     hass: HomeAssistant, entry: StromligningConfigEntry
 ) -> bool:
@@ -77,3 +70,10 @@ async def async_migrate_entry(
             entry, unique_id=_entry_identity(hass, entry), version=2
         )
     return True
+
+
+async def async_remove_entry(
+    hass: HomeAssistant, entry: StromligningConfigEntry
+) -> None:
+    """Remove a missing-price issue when its config entry is deleted."""
+    ir.async_delete_issue(hass, DOMAIN, f"fixed_price_required_{entry.entry_id}")

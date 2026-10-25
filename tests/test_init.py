@@ -50,8 +50,8 @@ def library(monkeypatch):
         calls.location(latitude, longitude)
         client.supplier = {"id": "grid", "companyName": "Grid", "priceArea": "DK2"}
         client.available_companies = [
-            {"id": "product", "name": "Provider - Product"},
-            {"id": "other", "name": "Provider - Product"},
+            {"id": "product", "name": "Provider - Product", "productType": "variable"},
+            {"id": "other", "name": "Provider - Product", "productType": "variable"},
         ]
 
     def update(client, start):
@@ -461,7 +461,7 @@ async def test_options_preserve_name_and_reload_once(integration_hass, library):
     assert old_runtime._closed
     assert not old_runtime._listeners
     assert library.update.call_count == initial_calls + 2
-    assert len(entry.update_listeners) == 1
+    assert not entry.update_listeners
 
 
 @pytest.mark.asyncio
@@ -640,6 +640,277 @@ async def test_public_tomorrow_and_forecast_attributes(
         dt_utils.parse_datetime(refresh.state)
         == entry.runtime_data.api.get_next_update()
     )
+
+
+@pytest.fixture
+def fixed_library(library, monkeypatch):
+    """Add fixed products without relying on display names or catalogue prices."""
+    from pystromligning import Stromligning
+
+    original_location = Stromligning.set_location
+    original_update = Stromligning.update
+    library.net_prices = []
+
+    def location(client, latitude, longitude):
+        original_location(client, latitude, longitude)
+        client.available_companies.extend(
+            {
+                "id": product,
+                "name": "Agreement",
+                "productType": "fixed",
+                "fixedPrice": 99,
+            }
+            for product in ("fixed", "second_fixed")
+        )
+
+    def update(client, start):
+        library.net_prices.append(client.electricity_price)
+        original_update(client, start)
+
+    monkeypatch.setattr(Stromligning, "set_location", location)
+    monkeypatch.setattr(Stromligning, "update", update)
+    return library
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("price,net", [(0, 0), (1.25, 1), (1.54321, 1.234568)])
+async def test_fixed_price_setup_and_reload(
+    integration_hass, fixed_library, price, net
+):
+    """Require an explicit price and use the same VAT conversion after reload."""
+    hass = integration_hass
+    options = {"company": "fixed", "aggregation": "1h", "forecasts": False}
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "user"}, data=options
+    )
+    assert result["step_id"] == "fixed_price"
+    assert result["data_schema"]({"electricity_price": price}) == {
+        "electricity_price": price
+    }
+    key = next(iter(result["data_schema"].schema))
+    import voluptuous as vol
+
+    assert key.default is vol.UNDEFINED
+    fixed_library.update.assert_not_called()
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"electricity_price": price}
+    )
+    assert result["type"] == "create_entry"
+    entry = result["result"]
+    assert entry.options == {**options, "electricity_price": price}
+    await hass.async_block_till_done()
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    assert fixed_library.net_prices == [net, net]
+    await hass.config_entries.async_reload(entry.entry_id)
+    assert fixed_library.net_prices == [net, net, net]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "failure,error",
+    [(TimeoutError, "cannot_connect"), (TooManyRequests, "too_many_requests")],
+)
+async def test_fixed_price_lookup_failure_keeps_step(
+    integration_hass, fixed_library, failure, error
+):
+    """A failed price lookup can be retried without repeating discovery."""
+    hass = integration_hass
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"company": "fixed", "aggregation": "1h", "forecasts": False},
+    )
+    location_calls = fixed_library.location.call_count
+    fixed_library.update.side_effect = failure
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"electricity_price": 1.25}
+    )
+    assert result["step_id"] == "fixed_price"
+    assert result["errors"] == {"base": error}
+    assert not hass.config_entries.async_entries(DOMAIN)
+    assert fixed_library.location.call_count == location_calls
+    fixed_library.update.side_effect = None
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"electricity_price": 1.25}
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("price", [float("nan"), float("inf")])
+async def test_fixed_price_nonfinite_input(integration_hass, fixed_library, price):
+    """Non-finite selector values return a field error without an API call."""
+    hass = integration_hass
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": "user"},
+        data={"company": "fixed", "aggregation": "1h", "forecasts": False},
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"electricity_price": price}
+    )
+    assert result["step_id"] == "fixed_price"
+    assert result["errors"] == {"electricity_price": "invalid_price"}
+    fixed_library.update.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_fixed_price_options_and_product_switch(integration_hass, fixed_library):
+    """Retain a price only for the same product, and clear it for variable pricing."""
+    import voluptuous as vol
+
+    hass = integration_hass
+    entry = legacy_entry("fixed")
+    with patch.object(
+        hass.config_entries, "async_setup", AsyncMock(return_value=False)
+    ):
+        await hass.config_entries.async_add(entry)
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, "electricity_price": 1.25}
+    )
+    await add_entry(hass, entry)
+    options = {"company": "fixed", "aggregation": "1h", "forecasts": False}
+    result = await hass.config_entries.options.async_init(entry.entry_id, data=options)
+    key = next(iter(result["data_schema"].schema))
+    assert key.default() == 1.25
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"electricity_price": 2.5}
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    assert entry.options["electricity_price"] == 2.5
+    assert fixed_library.net_prices[-2:] == [2, 2]
+    result = await hass.config_entries.options.async_init(
+        entry.entry_id, data={**options, "company": "second_fixed"}
+    )
+    key = next(iter(result["data_schema"].schema))
+    assert key.default is vol.UNDEFINED
+    hass.config_entries.options.async_abort(result["flow_id"])
+    result = await hass.config_entries.options.async_init(
+        entry.entry_id, data={**options, "company": "product"}
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    assert "electricity_price" not in entry.options
+    assert entry.options["name"] == "My existing prices"
+    assert fixed_library.net_prices[-2:] == [None, None]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("remove", [False, True])
+async def test_existing_fixed_entry_repair(integration_hass, fixed_library, remove):
+    """Missing prices stop setup and the repair clears on correction or removal."""
+    from homeassistant.helpers import issue_registry as ir
+
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry("fixed"))
+    assert entry.state is config_entries.ConfigEntryState.SETUP_ERROR
+    fixed_library.update.assert_not_called()
+    registry = ir.async_get(hass)
+    issue_id = f"fixed_price_required_{entry.entry_id}"
+    assert registry.async_get_issue(DOMAIN, issue_id) is not None
+    if remove:
+        await hass.config_entries.async_remove(entry.entry_id)
+    else:
+        result = await hass.config_entries.options.async_init(
+            entry.entry_id,
+            data={"company": "fixed", "aggregation": "1h", "forecasts": False},
+        )
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {"electricity_price": 1.25}
+        )
+        assert result["type"] == "create_entry"
+        await hass.async_block_till_done()
+        assert entry.state is config_entries.ConfigEntryState.LOADED
+    assert registry.async_get_issue(DOMAIN, issue_id) is None
+
+
+@pytest.mark.asyncio
+async def test_fixed_price_concurrent_options(integration_hass, fixed_library):
+    """Two price steps completing together cannot save the same product twice."""
+    hass = integration_hass
+    entries = [
+        await add_entry(hass, legacy_entry(product)) for product in ("product", "other")
+    ]
+    flows = [
+        await hass.config_entries.options.async_init(
+            entry.entry_id,
+            data={"company": "fixed", "aggregation": "1h", "forecasts": False},
+        )
+        for entry in entries
+    ]
+    barrier = Barrier(2)
+    initial_calls = fixed_library.update.call_count
+
+    def wait_for_validation():
+        if fixed_library.update.call_count <= initial_calls + 2:
+            barrier.wait(timeout=10)
+
+    fixed_library.update.side_effect = wait_for_validation
+    results = await asyncio.gather(
+        *(
+            hass.config_entries.options.async_configure(
+                flow["flow_id"], {"electricity_price": price}
+            )
+            for flow, price in zip(flows, (1.25, 2.5), strict=True)
+        )
+    )
+    assert sorted(result["type"] for result in results) == ["create_entry", "form"]
+    rejected = next(result for result in results if result["type"] == "form")
+    assert rejected["step_id"] == "fixed_price"
+    assert rejected["errors"] == {"base": "already_configured"}
+    await hass.async_block_till_done()
+    assert sum(entry.options["company"] == "fixed" for entry in entries) == 1
+
+
+@pytest.mark.asyncio
+async def test_fixed_price_setup_rechecks_duplicates(integration_hass, fixed_library):
+    """An entry saved while the price form is open prevents duplicate creation."""
+    hass = integration_hass
+    options = {"company": "fixed", "aggregation": "1h", "forecasts": False}
+    pending = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "user"}, data=options
+    )
+    entry = await add_entry(hass, legacy_entry("product"))
+    result = await hass.config_entries.options.async_init(entry.entry_id, data=options)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"electricity_price": 1.25}
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    result = await hass.config_entries.flow.async_configure(
+        pending["flow_id"], {"electricity_price": 2.5}
+    )
+    assert result["type"] == "abort"
+    assert result["reason"] == "already_configured"
+    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+
+
+@pytest.mark.asyncio
+async def test_fixed_price_options_failure_preserves_saved_price(
+    integration_hass, fixed_library
+):
+    """A failed validation does not change the running entry's agreed price."""
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry("product"))
+    options = {"company": "fixed", "aggregation": "1h", "forecasts": False}
+    result = await hass.config_entries.options.async_init(entry.entry_id, data=options)
+    fixed_library.update.side_effect = TimeoutError
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"electricity_price": 1.25}
+    )
+    assert result["step_id"] == "fixed_price"
+    assert result["errors"] == {"base": "cannot_connect"}
+    assert entry.options["company"] == "product"
+    assert "electricity_price" not in entry.options
+    fixed_library.update.side_effect = None
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"electricity_price": 2.5}
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    assert entry.options["electricity_price"] == 2.5
 
 
 @pytest.mark.asyncio
