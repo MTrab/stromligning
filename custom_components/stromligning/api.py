@@ -12,6 +12,7 @@ from pystromligning import Stromligning
 from pystromligning.exceptions import InvalidAPIResponse
 
 from .const import CONF_AGGREGATION, CONF_COMPANY, CONF_FORECASTS
+from .location import home_coordinates
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,10 +46,11 @@ class StromligningAPI:
 
     async def set_location(self) -> None:
         """Set the location."""
+        latitude, longitude = home_coordinates(self.hass)
         await self.hass.async_add_executor_job(
             self._data.set_location,
-            self.hass.config.latitude,
-            self.hass.config.longitude,
+            latitude,
+            longitude,
         )
 
         LOGGER.debug(

@@ -47,7 +47,7 @@ def library(monkeypatch):
     calls = Mock()
 
     def location(client, latitude, longitude):
-        calls.location()
+        calls.location(latitude, longitude)
         client.supplier = {"id": "grid", "companyName": "Grid", "priceArea": "DK2"}
         client.available_companies = [
             {"id": "product", "name": "Provider - Product"},
@@ -62,6 +62,148 @@ def library(monkeypatch):
     monkeypatch.setattr("pystromligning.Stromligning.set_location", location)
     monkeypatch.setattr("pystromligning.Stromligning.update", update)
     return calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("yaml_home", [False, True])
+async def test_home_zone_coordinates_across_flows_and_setup(
+    integration_hass, library, yaml_home
+):
+    """Only a YAML home override changes coordinates in every lookup path."""
+    from homeassistant.setup import async_setup_component
+
+    hass = integration_hass
+    config = {"zone": []}
+    if yaml_home:
+        config["zone"] = [{"name": "Home", "latitude": 56.0, "longitude": 8.0}]
+    assert await async_setup_component(hass, "zone", config)
+    home = hass.states.get("zone.home")
+    assert home.attributes["editable"] is not yaml_home
+    expected = (56.0, 8.0) if yaml_home else (55.6761, 12.5683)
+
+    options = {"company": "product", "aggregation": "1h", "forecasts": False}
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "user"}, data=options
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    entry = result["result"]
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    assert library.location.call_count == 2
+    assert all(call.args == expected for call in library.location.call_args_list)
+
+    library.location.reset_mock()
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == "form"
+    library.location.assert_called_once_with(*expected)
+
+
+@pytest.mark.asyncio
+async def test_home_zone_setup_finishes_before_concurrent_lookups(
+    integration_hass, library, monkeypatch
+):
+    """Concurrent config flows wait for zone setup before looking up suppliers."""
+    from homeassistant.components import zone
+    from homeassistant.setup import async_setup_component
+
+    hass = integration_hass
+    started = asyncio.Event()
+    release = asyncio.Event()
+    flows_waiting = asyncio.Event()
+    original_setup = zone.async_setup
+    original_dependencies = config_entries.async_process_deps_reqs
+    waiting = 0
+
+    async def delayed_setup(hass, config):
+        started.set()
+        await release.wait()
+        return await original_setup(hass, config)
+
+    async def process_dependencies(hass, config, integration):
+        nonlocal waiting
+        if integration.domain == DOMAIN:
+            waiting += 1
+            if waiting == 2:
+                flows_waiting.set()
+        return await original_dependencies(hass, config, integration)
+
+    monkeypatch.setattr(zone, "async_setup", delayed_setup)
+    monkeypatch.setattr(config_entries, "async_process_deps_reqs", process_dependencies)
+    setup_task = asyncio.create_task(
+        async_setup_component(
+            hass,
+            "zone",
+            {"zone": [{"name": "Home", "latitude": 56.0, "longitude": 8.0}]},
+        )
+    )
+    try:
+        async with asyncio.timeout(10):
+            await started.wait()
+            flows = [
+                asyncio.create_task(
+                    hass.config_entries.flow.async_init(
+                        DOMAIN, context={"source": "user"}
+                    )
+                )
+                for _ in range(2)
+            ]
+            await flows_waiting.wait()
+            assert all(not flow.done() for flow in flows)
+            library.location.assert_not_called()
+            release.set()
+            assert await setup_task
+            results = await asyncio.gather(*flows)
+        assert all(result["type"] == "form" for result in results)
+        assert library.location.call_count == 2
+        assert all(call.args == (56.0, 8.0) for call in library.location.call_args_list)
+    finally:
+        release.set()
+        await setup_task
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("editable", [True, None])
+async def test_home_zone_without_yaml_marker_uses_config(integration_hass, editable):
+    """Different coordinates alone do not identify a YAML-defined home zone."""
+    from custom_components.stromligning.location import home_coordinates
+
+    hass = integration_hass
+    attrs = {"latitude": 56.0, "longitude": 8.0}
+    if editable is not None:
+        attrs["editable"] = editable
+    hass.states.async_set("zone.home", "0", attrs)
+    assert home_coordinates(hass) == (55.6761, 12.5683)
+    hass.states.async_remove("zone.home")
+    assert home_coordinates(hass) == (55.6761, 12.5683)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "state,coordinates",
+    [
+        ("unavailable", {"latitude": 56.0, "longitude": 8.0}),
+        ("unknown", {"latitude": 56.0, "longitude": 8.0}),
+        ("0", {"latitude": 56.0}),
+        ("0", {"latitude": 91.0, "longitude": 8.0}),
+        ("0", {"latitude": 56.0, "longitude": "invalid"}),
+        ("0", {"latitude": float("nan"), "longitude": 8.0}),
+    ],
+)
+async def test_invalid_yaml_home_returns_flow_error(
+    integration_hass, library, state, coordinates
+):
+    """An invalid explicit override fails without an API call or silent fallback."""
+    from homeassistant.setup import async_setup_component
+
+    hass = integration_hass
+    assert await async_setup_component(hass, "zone", {"zone": []})
+    hass.states.async_set("zone.home", state, {"editable": False, **coordinates})
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "user"}
+    )
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "cannot_connect"}
+    library.location.assert_not_called()
 
 
 def legacy_entry(company="product", forecasts=False):
