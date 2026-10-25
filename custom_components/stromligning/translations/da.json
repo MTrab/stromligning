@@ -91,6 +91,22 @@
                     }
                 }
             },
+            "forecasts_spotprice_vat": {
+                "name": "Spotprisudsigt inkl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Spotpriser den næste uge"
+                    }
+                }
+            },
+            "forecasts_spotprice_ex_vat": {
+                "name": "Spotprisudsigt ekskl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Spotpriser den næste uge"
+                    }
+                }
+            },
             "net_owner": {
                 "name": "Elnetselskab"
             },

@@ -421,6 +421,26 @@ SENSORS = [
         entity_registry_enabled_default=False,
         translation_key="forecasts_ex_vat",
     ),
+    StromligningSensorEntityDescription(
+        key="forecasts_spotprice_vat",
+        entity_category=None,
+        state_class=None,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:electron-framework",
+        value_fn=lambda stromligning: stromligning.get_forecasts(vat=True),
+        entity_registry_enabled_default=True,
+        translation_key="forecasts_spotprice_vat",
+    ),
+    StromligningSensorEntityDescription(
+        key="forecasts_spotprice_ex_vat",
+        entity_category=None,
+        state_class=None,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:electron-framework",
+        value_fn=lambda stromligning: stromligning.get_forecasts(vat=False),
+        entity_registry_enabled_default=False,
+        translation_key="forecasts_spotprice_ex_vat",
+    ),
 ]
 
 
@@ -515,6 +535,14 @@ class StromligningSensor(StromligningEntity, SensorEntity):
             "forecasts_ex_vat": (
                 self.api.prices_forecasts,
                 lambda price: price["price"]["value"],
+            ),
+            "forecasts_spotprice_vat": (
+                self.api.prices_forecasts,
+                lambda price: price["details"]["electricity"]["total"],
+            ),
+            "forecasts_spotprice_ex_vat": (
+                self.api.prices_forecasts,
+                lambda price: price["details"]["electricity"]["value"],
             ),
             "spotprice_vat": (
                 self.api.prices_today,
