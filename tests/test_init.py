@@ -911,3 +911,108 @@ async def test_fixed_price_options_failure_preserves_saved_price(
     assert result["type"] == "create_entry"
     await hass.async_block_till_done()
     assert entry.options["electricity_price"] == 2.5
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("forecasts", [False, True])
+async def test_spot_forecast_setup(integration_hass, library, forecasts):
+    """Create spot forecasts only when enabled, with the existing VAT defaults."""
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry(forecasts=forecasts))
+    registry = er.async_get(hass)
+    for suffix, disabled in [
+        ("vat", None),
+        ("ex_vat", er.RegistryEntryDisabler.INTEGRATION),
+    ]:
+        entity_id = f"sensor.my_existing_prices_forecasts_spotprice_{suffix}"
+        registered = registry.async_get(entity_id)
+        if not forecasts:
+            assert registered is None
+            assert hass.states.get(entity_id) is None
+            continue
+        assert (
+            registered.unique_id
+            == f"forecasts_spotprice_{suffix}_{entry.entry_id}".lower()
+        )
+        assert registered.disabled_by is disabled
+    if forecasts:
+        state = hass.states.get("sensor.my_existing_prices_forecasts_spotprice_vat")
+        assert dt_utils.parse_datetime(
+            state.state
+        ) == entry.runtime_data.api.last_update.replace(microsecond=0)
+        assert state.attributes["prices"] == []
+    library.update.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_spot_forecasts_during_fetch_and_rollover(
+    integration_hass, library, monkeypatch
+):
+    """Publish both VAT variants from a completed fetch before a local rollover."""
+    from datetime import timedelta
+    from pystromligning import Stromligning
+
+    hass = integration_hass
+    original = Stromligning.update
+    spot = 0.4
+
+    def update(client, start):
+        original(client, start)
+        midnight = dt_utils.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        records = day_records(midnight + timedelta(days=2), client.aggregation, True)
+        for record in records:
+            record["details"]["electricity"] = {"value": spot, "total": spot * 1.25}
+        client.prices.extend(records)
+
+    monkeypatch.setattr(Stromligning, "update", update)
+    entry = legacy_entry(forecasts=True)
+    with patch.object(hass.config_entries, "async_setup", AsyncMock(return_value=True)):
+        await hass.config_entries.async_add(entry)
+    registry = er.async_get(hass)
+    registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"forecasts_spotprice_ex_vat_{entry.entry_id}".lower(),
+        config_entry=entry,
+        suggested_object_id="export_forecast",
+        disabled_by=None,
+    )
+    await add_entry(hass, entry)
+    coordinator = entry.runtime_data
+    vat_id = "sensor.my_existing_prices_forecasts_spotprice_vat"
+    ex_id = "sensor.export_forecast"
+    assert hass.states.get(vat_id).attributes["prices"][0]["price"] == 0.5
+    assert hass.states.get(ex_id).attributes["prices"][0]["price"] == 0.4
+
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    original_fetch = coordinator.api.update_prices
+
+    async def delayed_fetch():
+        entered.set()
+        await release.wait()
+        await original_fetch()
+
+    monkeypatch.setattr(coordinator.api, "update_prices", delayed_fetch)
+    spot = -0.2
+    fetch = asyncio.create_task(coordinator._fetch(None))
+    local = None
+    try:
+        async with asyncio.timeout(10):
+            await entered.wait()
+            local = asyncio.create_task(coordinator._local_update(None))
+            await asyncio.sleep(0)
+            assert not local.done()
+            assert hass.states.get(vat_id).attributes["prices"][0]["price"] == 0.5
+            assert hass.states.get(ex_id).attributes["prices"][0]["price"] == 0.4
+            release.set()
+            await asyncio.gather(fetch, local)
+    finally:
+        release.set()
+        await asyncio.gather(fetch, *([local] if local else []))
+    assert hass.states.get(vat_id).attributes["prices"][0]["price"] == -0.25
+    assert hass.states.get(ex_id).attributes["prices"][0]["price"] == -0.2
+    total = hass.states.get("sensor.my_existing_prices_forecasts_vat")
+    assert total.attributes["prices"][0]["price"] == -5
+    assert set(total.attributes["prices"][0]) == {"price", "start", "end"}
+    assert library.update.call_count == 2

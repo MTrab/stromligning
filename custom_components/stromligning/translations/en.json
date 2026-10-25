@@ -107,6 +107,22 @@
                     }
                 }
             },
+            "forecasts_spotprice_vat": {
+                "name": "Spot price forecasts incl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Spot prices next week"
+                    }
+                }
+            },
+            "forecasts_spotprice_ex_vat": {
+                "name": "Spot price forecasts excl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Spot prices next week"
+                    }
+                }
+            },
             "net_owner": {
                 "name": "Net operator"
             },
