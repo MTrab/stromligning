@@ -21,7 +21,9 @@ def _build_api(mock_hass, mock_entry, prices: list[dict]) -> StromligningAPI:
     api.prices_forecasts = []
     api.forecast_data = False
     api.tomorrow_available = False
-    api.listeners = []
+    api._snapshot = [
+        {**price, "date": datetime.fromisoformat(price["date"])} for price in prices
+    ]
     api.last_update = None
     return api
 
@@ -39,11 +41,6 @@ async def test_prepare_data_splits_prices_into_today_tomorrow_and_forecasts(
     monkeypatch.setattr(
         "custom_components.stromligning.api.dt_utils.as_local",
         lambda value: value,
-    )
-    sent_signals: list[str] = []
-    monkeypatch.setattr(
-        "custom_components.stromligning.api.async_dispatcher_send",
-        lambda hass, signal: sent_signals.append(signal),
     )
 
     prices = [
@@ -78,7 +75,6 @@ async def test_prepare_data_splits_prices_into_today_tomorrow_and_forecasts(
     ]
     assert api.forecast_data is True
     assert api.tomorrow_available is False
-    assert sent_signals
 
 
 @pytest.mark.asyncio
@@ -94,10 +90,6 @@ async def test_prepare_data_marks_tomorrow_available_with_full_non_forecast_data
     monkeypatch.setattr(
         "custom_components.stromligning.api.dt_utils.as_local",
         lambda value: value,
-    )
-    monkeypatch.setattr(
-        "custom_components.stromligning.api.async_dispatcher_send",
-        lambda hass, signal: None,
     )
 
     prices = [
@@ -129,10 +121,6 @@ async def test_prepare_data_clears_incomplete_tomorrow_without_forecasts(
     monkeypatch.setattr(
         "custom_components.stromligning.api.dt_utils.as_local",
         lambda value: value,
-    )
-    monkeypatch.setattr(
-        "custom_components.stromligning.api.async_dispatcher_send",
-        lambda hass, signal: None,
     )
 
     prices = [

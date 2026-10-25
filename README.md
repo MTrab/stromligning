@@ -9,6 +9,8 @@ Stromligning for Home Assistant integrates Day Ahead spotprices for electricity,
 
 The integration automatically recognises tariff settings from the Home Assistant home location coordinates and allows you to select your electricity vendor.
 
+Requires Home Assistant 2024.12.0 or newer.
+
 ## Table of Content
 
 [**Installation**](#installation)

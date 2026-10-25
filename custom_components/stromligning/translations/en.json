@@ -1,15 +1,16 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Integration with same name already existing"
+            "already_configured": "This product, resolution and forecast combination is already configured"
         },
         "error": {
-            "too_many_requests": "Too many requests to the API - try again in 15 minutes"
+            "too_many_requests": "Too many requests to the API - try again in 15 minutes",
+            "cannot_connect": "Unable to retrieve valid prices or products. Check the location and try again.",
+            "already_configured": "This product, resolution and forecast combination is already configured"
         },
         "step": {
             "user": {
                 "data": {
-                    "name": "Name for this integration",
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
                     "forecasts": "Include price forecasts for the next week? (may be inaccurate)"
@@ -19,10 +20,12 @@
     },
     "options": {
         "abort": {
-            "already_configured": "Integration with same name already existing"
+            "already_configured": "This product, resolution and forecast combination is already configured"
         },
         "error": {
-            "too_many_requests": "Too many requests to the API - try again in 15 minutes"
+            "too_many_requests": "Too many requests to the API - try again in 15 minutes",
+            "cannot_connect": "Unable to retrieve valid prices or products. Check the location and try again.",
+            "already_configured": "This product, resolution and forecast combination is already configured"
         },
         "step": {
             "init": {

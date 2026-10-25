@@ -1,7 +1,7 @@
 {
     "name": "Strømligning",
     "render_readme": true,
-    "homeassistant": "2024.10.0",
+    "homeassistant": "2024.12.0",
     "zip_release": true,
     "filename": "stromligning.zip",
     "country": [

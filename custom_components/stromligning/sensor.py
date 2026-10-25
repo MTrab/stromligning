@@ -11,19 +11,18 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.util import slugify as util_slugify
-from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
+from .coordinator import StromligningConfigEntry
 from .api import StromligningAPI
 from .base import (
+    StromligningEntity,
     StromligningSensorEntityDescription,
     build_price_attributes,
 )
-from .const import ATTR_PRICES, CONF_FORECASTS, DOMAIN, UPDATE_SIGNAL_NEXT
+from .const import ATTR_PRICES, CONF_FORECASTS, DOMAIN
 
 LOGGER = logging.getLogger(__name__)
 
@@ -269,7 +268,6 @@ SENSORS = [
         value_fn=lambda stromligning: stromligning.get_next_update(),
         entity_registry_enabled_default=True,
         translation_key="next_data_refresh",
-        update_signal=UPDATE_SIGNAL_NEXT,
     ),
     StromligningSensorEntityDescription(
         key="net_owner",
@@ -426,7 +424,7 @@ SENSORS = [
 ]
 
 
-async def async_setup_entry(hass, entry: ConfigEntry, async_add_devices):
+async def async_setup_entry(hass, entry: StromligningConfigEntry, async_add_devices):
     """Set up sensors."""
     sensors = []
 
@@ -446,7 +444,7 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_devices):
     async_add_devices(sensors)
 
 
-class StromligningSensor(SensorEntity):
+class StromligningSensor(StromligningEntity, SensorEntity):
     """Representation of a Stromligning Sensor."""
 
     _unrecorded_attributes = frozenset({ATTR_PRICES})
@@ -458,20 +456,20 @@ class StromligningSensor(SensorEntity):
         self,
         description: StromligningSensorEntityDescription,
         hass: HomeAssistant,
-        entry: ConfigEntry,
+        entry: StromligningConfigEntry,
     ) -> None:
         """Initialize a Stromligning Sensor."""
-        super().__init__()
+        super().__init__(entry.runtime_data)
 
         self.entity_description = description
         self._config = entry
         self._hass = hass
-        self.api: StromligningAPI = hass.data[DOMAIN][entry.entry_id]
+        self.api = entry.runtime_data.api
 
         self._attr_unique_id = util_slugify(
             f"{self.entity_description.key}_{self._config.entry_id}"
         )
-        self._attr_should_poll = True
+        self._attr_should_poll = False
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, self._config.entry_id)},
@@ -483,19 +481,13 @@ class StromligningSensor(SensorEntity):
             self.entity_description.unit_of_measurement
         )
 
-        async_dispatcher_connect(
-            self._hass,
-            util_slugify(self.entity_description.update_signal),
-            self.handle_update,
-        )
-
         self.entity_id = sensor.ENTITY_ID_FORMAT.format(
             util_slugify(
                 f"{self._config.data.get(CONF_NAME)}_{self.entity_description.key}"
             )
         )
 
-    async def handle_attributes(self) -> None:
+    def handle_attributes(self) -> None:
         """Handle attributes."""
         key = self.entity_description.key
 
@@ -571,32 +563,14 @@ class StromligningSensor(SensorEntity):
         elif key in at_attribute_map:
             self._attr_extra_state_attributes = {"at": at_attribute_map[key](self.api)}
 
-    async def handle_update(self) -> None:
-        """Handle data update."""
-        try:
-            self._attr_native_value = self.entity_description.value_fn(  # type: ignore
-                self._hass.data[DOMAIN][self._config.entry_id]
-            )
-
-            LOGGER.debug(
-                "Setting value for '%s' to: %s",
-                self.entity_id,
-                self._attr_native_value,
-            )
-            await self.handle_attributes()
-            self._attr_available = True
-        except TooManyRequests:
-            if self._attr_available:
-                LOGGER.warning(
-                    "You made too many requests to the API and have been banned for 15 minutes."
-                )
-            self._attr_available = False
-        except InvalidAPIResponse:
-            if self._attr_available:
-                LOGGER.error("The Stromligning API made an invalid response.")
-            self._attr_available = False
+    @callback
+    def handle_update(self) -> None:
+        """Refresh the cached value and public attributes."""
+        self._attr_native_value = self.entity_description.value_fn(self.api)
+        self.handle_attributes()
+        self.async_write_ha_state()
 
     async def async_added_to_hass(self):
-        """Fetch initial state when the entity is added to Home Assistant."""
-        await self.handle_update()
-        return await super().async_added_to_hass()
+        """Subscribe only while added and populate the initial state."""
+        await super().async_added_to_hass()
+        self.handle_update()
