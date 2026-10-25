@@ -6,13 +6,19 @@ from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryError
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import (
     async_track_point_in_utc_time,
     async_track_time_change,
 )
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_utils
-from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
+from pystromligning.exceptions import (
+    FixedPriceRequired,
+    InvalidAPIResponse,
+    TooManyRequests,
+)
 from requests.exceptions import RequestException
 
 from .api import StromligningAPI
@@ -56,6 +62,20 @@ class StromligningCoordinator(DataUpdateCoordinator[StromligningAPI]):
                     await self.api.set_location()
                     self._located = True
                 await self.api.update_prices()
+            except FixedPriceRequired as err:
+                ir.async_create_issue(
+                    self.hass,
+                    DOMAIN,
+                    f"fixed_price_required_{self.entry.entry_id}",
+                    is_fixable=False,
+                    severity=ir.IssueSeverity.ERROR,
+                    translation_key="fixed_price_required",
+                    translation_placeholders={"name": self.entry.title},
+                )
+                raise ConfigEntryError(
+                    translation_domain=DOMAIN,
+                    translation_key="fixed_price_required",
+                ) from err
             except TooManyRequests as err:
                 self._retry_at = dt_utils.utcnow() + timedelta(minutes=15)
                 self.rate_limit_until = self._retry_at
@@ -73,6 +93,9 @@ class StromligningCoordinator(DataUpdateCoordinator[StromligningAPI]):
                 raise UpdateFailed(
                     "Unable to retrieve valid electricity prices"
                 ) from err
+            ir.async_delete_issue(
+                self.hass, DOMAIN, f"fixed_price_required_{self.entry.entry_id}"
+            )
             self._retry_at = None
             self.rate_limit_until = None
             return self.api

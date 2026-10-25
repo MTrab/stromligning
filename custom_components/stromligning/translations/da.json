@@ -6,7 +6,8 @@
         "error": {
             "too_many_requests": "For mange API-forespørgsler – prøv igen om 15 minutter",
             "cannot_connect": "Kunne ikke hente gyldige priser eller produkter. Kontrollér lokationen, og prøv igen.",
-            "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret"
+            "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret",
+            "invalid_price": "Angiv en gyldig pris på nul eller derover."
         },
         "step": {
             "user": {
@@ -14,6 +15,13 @@
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)"
+                }
+            },
+            "fixed_price": {
+                "title": "Din faste elpris",
+                "description": "Angiv elprisen fra din aftale inkl. moms, uden nettariffer, afgifter og abonnement. Opdater den her, når din aftale ændres.",
+                "data": {
+                    "electricity_price": "Elpris inkl. moms (kr./kWh)"
                 }
             }
         }
@@ -25,7 +33,8 @@
         "error": {
             "too_many_requests": "For mange API-forespørgsler – prøv igen om 15 minutter",
             "cannot_connect": "Kunne ikke hente gyldige priser eller produkter. Kontrollér lokationen, og prøv igen.",
-            "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret"
+            "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret",
+            "invalid_price": "Angiv en gyldig pris på nul eller derover."
         },
         "step": {
             "init": {
@@ -33,6 +42,13 @@
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)"
+                }
+            },
+            "fixed_price": {
+                "title": "Din faste elpris",
+                "description": "Angiv elprisen fra din aftale inkl. moms, uden nettariffer, afgifter og abonnement. Opdater den her, når din aftale ændres.",
+                "data": {
+                    "electricity_price": "Elpris inkl. moms (kr./kWh)"
                 }
             }
         }
@@ -315,6 +331,17 @@
                     }
                 }
             }
+        }
+    },
+    "issues": {
+        "fixed_price_required": {
+            "title": "Fast elpris mangler",
+            "description": "Fastprisaftalen for {name} mangler din aftalte elpris. Åbn Indstillinger > Enheder og tjenester > Strømligning, vælg Konfigurer for denne opsætning, og angiv prisen inkl. moms, uden nettariffer, afgifter og abonnement."
+        }
+    },
+    "exceptions": {
+        "fixed_price_required": {
+            "message": "Angiv din aftalte faste elpris i integrationens indstillinger."
         }
     }
 }

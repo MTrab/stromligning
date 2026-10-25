@@ -15,7 +15,7 @@
     "iot_class": "cloud_polling",
     "issue_tracker": "https://github.com/MTrab/stromligning/issues",
     "requirements": [
-        "pystromligning==0.1.4"
+        "pystromligning@git+https://github.com/MTrab/pystromligning.git@enhancement/fixed-price-products"
     ],
     "version": "1.1.4"
 }

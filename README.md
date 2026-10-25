@@ -60,3 +60,18 @@ Reload Home Assistant and use the Jinja template by inserting the example below 
 ```
 
 This will result in a sensor showing the cheapest 3 hours within the known prices
+
+### Fixed-price agreements
+
+Fixed-price products have an extra setup step for your agreed electricity price
+in kr/kWh including VAT. Enter only the electricity price, without grid tariffs,
+taxes or subscription fees. The API calculates tariffs and taxes separately.
+
+The integration does not use the product's current advertised price as your
+agreement price. Change the saved price under the integration's **Configure**
+settings when your agreement changes. Selecting another fixed-price product
+requires entering its price; selecting a variable product removes the saved
+fixed price.
+
+Existing fixed-price entries without a saved price show a repair notification
+with instructions for entering it under **Configure**.

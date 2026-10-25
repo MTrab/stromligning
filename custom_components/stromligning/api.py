@@ -1,6 +1,7 @@
 """API connector for Stromligning."""
 
 from copy import deepcopy
+from decimal import Decimal
 import logging
 import math
 from datetime import datetime, timedelta
@@ -9,12 +10,33 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_utils
 from pystromligning import Stromligning
-from pystromligning.exceptions import InvalidAPIResponse
+from pystromligning.exceptions import FixedPriceRequired, InvalidAPIResponse
 
-from .const import CONF_AGGREGATION, CONF_COMPANY, CONF_FORECASTS
+from .const import (
+    CONF_AGGREGATION,
+    CONF_COMPANY,
+    CONF_ELECTRICITY_PRICE,
+    CONF_FORECASTS,
+)
 from .location import home_coordinates
 
 LOGGER = logging.getLogger(__name__)
+
+
+def set_electricity_price(api: Stromligning, options: dict) -> None:
+    """Convert the agreed price including 25% VAT to the API's net price."""
+    price = options.get(CONF_ELECTRICITY_PRICE)
+    if api.company.get("productType") != "fixed":
+        price = None
+    if price is not None:
+        if isinstance(price, bool) or not isinstance(price, (int, float)):
+            raise TypeError("Electricity price must be numeric")
+        if not math.isfinite(price) or price < 0:
+            raise ValueError("Electricity price must be finite and non-negative")
+        price = float(Decimal(str(price)) / Decimal("1.25"))
+    if api.company.get("productType") == "fixed" and price is None:
+        raise FixedPriceRequired("Enter the agreed price in the integration options")
+    api.set_electricity_price(price)
 
 
 class StromligningAPI:
@@ -72,6 +94,7 @@ class StromligningAPI:
             self._entry.options.get(CONF_FORECASTS, False),
         )
         self._data.set_forecast(self._entry.options.get(CONF_FORECASTS, False))
+        set_electricity_price(self._data, self._entry.options)
 
     async def update_prices(self) -> None:
         """Update the price object."""
