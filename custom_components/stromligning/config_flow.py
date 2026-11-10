@@ -23,6 +23,7 @@ from .const import (
     CONF_DEFAULT_NAME,
     CONF_ELECTRICITY_PRICE,
     CONF_FORECASTS,
+    CONF_PRODUCTION_PRICES,
     DOMAIN,
 )
 from .location import home_coordinates
@@ -57,6 +58,10 @@ def schema(companies, options):
             vol.Required(
                 CONF_FORECASTS,
                 default=options.get(CONF_FORECASTS, False),
+            ): bool,
+            vol.Required(
+                CONF_PRODUCTION_PRICES,
+                default=options.get(CONF_PRODUCTION_PRICES, False),
             ): bool,
         }
     )

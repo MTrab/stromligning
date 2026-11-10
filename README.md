@@ -77,6 +77,20 @@ For an EMHASS price list, use the VAT-exclusive sensor's `price` values:
 Replace the entity ID with the one from your installation and select the periods
 required by your EMHASS configuration.
 
+## Sale prices for surplus production
+
+Enable "Include sale prices for surplus production" in the integration options
+to create `production_price_vat` and `production_price_ex_vat`, for example for
+solar panels. The VAT-exclusive sensor is disabled by default.
+
+The state is the current sale price: the spot price, which carries no VAT, less
+the production tariffs from Energinet and your grid supplier. In
+`production_price_vat` the deducted tariffs include VAT; in
+`production_price_ex_vat` they do not. The `prices` attribute lists today's
+periods in the selected resolution. Prices come from the API's
+`/prices/production` endpoint for the grid supplier at Home Assistant's home
+location, which is one extra request per update. The setting is off by default.
+
 ## Use the custom template to show the next x cheapest hours
 
 Copy the `custom_templates/FindCheapestPeriod.jinja` to the `custom_templates` directory in your config folder (if it doesn't exist then create the folder)

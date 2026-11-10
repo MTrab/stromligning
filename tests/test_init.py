@@ -207,7 +207,7 @@ async def test_invalid_yaml_home_returns_flow_error(
     library.location.assert_not_called()
 
 
-def legacy_entry(company="product", forecasts=False):
+def legacy_entry(company="product", forecasts=False, **extra_options):
     """Build an existing version-one config entry including its historical name."""
     return config_entries.ConfigEntry(
         domain=DOMAIN,
@@ -222,6 +222,7 @@ def legacy_entry(company="product", forecasts=False):
             "company": company,
             "aggregation": "1h",
             "forecasts": forecasts,
+            **extra_options,
         },
         discovery_keys=MappingProxyType({}),
         subentries_data=None,
@@ -371,7 +372,13 @@ async def test_config_flow_product_ids_and_duplicates(integration_hass, library)
         "product": "Provider - Product",
         "other": "Provider - Product",
     }
-    options = {"company": "product", "aggregation": "15m", "forecasts": True}
+    assert "production_prices" in fields
+    options = {
+        "company": "product",
+        "aggregation": "15m",
+        "forecasts": True,
+        "production_prices": False,
+    }
     result = await hass.config_entries.flow.async_configure(result["flow_id"], options)
     assert result["type"] == "create_entry"
     entry = result["result"]
@@ -1093,3 +1100,71 @@ async def test_agreement_description_preserves_names(
     assert entry.title == "My integration"
     assert updated.model == "Another agreement (1h, forecasts disabled)"
     assert original_ids <= set(registry.entities)
+
+
+@pytest.fixture
+def production_library(library, monkeypatch):
+    """Return sale prices for the configured grid supplier."""
+
+    def update_production(client, start):
+        library.update_production(start)
+        midnight = dt_utils.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        client.production_prices = [
+            {"date": record["date"], "price": {"value": value, "total": value + 0.25}}
+            for record, value in zip(
+                day_records(midnight, client.aggregation),
+                range(len(day_records(midnight, client.aggregation))),
+            )
+        ]
+
+    monkeypatch.setattr(Stromligning, "update_production", update_production)
+    return library
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("enabled", [False, True])
+async def test_production_price_setup(integration_hass, production_library, enabled):
+    """Create sale price sensors and request them only when enabled."""
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry(production_prices=enabled))
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    registry = er.async_get(hass)
+    for suffix, disabled in [
+        ("vat", None),
+        ("ex_vat", er.RegistryEntryDisabler.INTEGRATION),
+    ]:
+        entity_id = f"sensor.my_existing_prices_production_price_{suffix}"
+        registered = registry.async_get(entity_id)
+        if not enabled:
+            assert registered is None
+            continue
+        assert (
+            registered.unique_id
+            == f"production_price_{suffix}_{entry.entry_id}".lower()
+        )
+        assert registered.disabled_by is disabled
+    if not enabled:
+        production_library.update_production.assert_not_called()
+        return
+    production_library.update_production.assert_called_once()
+    api = entry.runtime_data.api
+    current = api._find_period(api.production_today, dt_utils.utcnow())
+    state = hass.states.get("sensor.my_existing_prices_production_price_vat")
+    assert float(state.state) == current["price"]["total"]
+    assert api.get_production(False) == current["price"]["value"]
+    assert len(state.attributes["prices"]) == len(api.production_today)
+    assert state.attributes["prices"][0]["price"] == 0.25
+
+
+@pytest.mark.asyncio
+async def test_production_price_failure_retries_setup(
+    integration_hass, production_library, monkeypatch
+):
+    """Missing sale prices fail the update instead of loading stale entities."""
+    monkeypatch.setattr(
+        Stromligning,
+        "update_production",
+        lambda client, start: setattr(client, "production_prices", []),
+    )
+    entry = await add_entry(integration_hass, legacy_entry(production_prices=True))
+    assert entry.state is config_entries.ConfigEntryState.SETUP_RETRY

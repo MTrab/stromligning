@@ -14,7 +14,8 @@
                 "data": {
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
-                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)"
+                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
+                    "production_prices": "Include sale prices for surplus production (e.g. solar)?"
                 }
             },
             "fixed_price": {
@@ -41,7 +42,8 @@
                 "data": {
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
-                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)"
+                    "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
+                    "production_prices": "Include sale prices for surplus production (e.g. solar)?"
                 }
             },
             "fixed_price": {
@@ -143,6 +145,22 @@
                 "state": {
                     "15m": "15 minutes",
                     "1h": "Hourly"
+                }
+            },
+            "production_price_vat": {
+                "name": "Production sale price incl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Prices today"
+                    }
+                }
+            },
+            "production_price_ex_vat": {
+                "name": "Production sale price excl. VAT",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Prices today"
+                    }
                 }
             },
             "spotprice_vat": {

@@ -24,3 +24,9 @@ Library requests have a 60-second timeout. The library also supports
 production API.
 
 The manifest and test requirements use `pystromligning==0.2.0` from PyPI.
+
+When sale prices for surplus production are enabled, the integration also calls
+`GET /prices/production` with the grid supplier, start date, aggregation and
+forecast setting. Each price is the spot price excluding VAT less Energinet's and
+the grid supplier's production tariffs; `value` excludes and `total` includes VAT
+on those deductions.

@@ -14,7 +14,8 @@
                 "data": {
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
-                    "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)"
+                    "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)",
+                    "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?"
                 }
             },
             "fixed_price": {
@@ -41,7 +42,8 @@
                 "data": {
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
-                    "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)"
+                    "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)",
+                    "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?"
                 }
             },
             "fixed_price": {
@@ -143,6 +145,22 @@
                 "state": {
                     "15m": "15 minutter",
                     "1h": "Timevis"
+                }
+            },
+            "production_price_vat": {
+                "name": "Salgspris for produktion inkl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Priser i dag"
+                    }
+                }
+            },
+            "production_price_ex_vat": {
+                "name": "Salgspris for produktion ekskl. moms",
+                "state_attributes": {
+                    "prices": {
+                        "name": "Priser i dag"
+                    }
                 }
             },
             "spotprice_vat": {

@@ -40,6 +40,7 @@ def test_forecast_prices(sensor_key, expected, aggregation, day, monkeypatch):
     sensor.api = SimpleNamespace(
         prices_forecasts=prices,
         prices_today=[],
+        production_today=[],
         get_aggregation=lambda: aggregation,
     )
 
