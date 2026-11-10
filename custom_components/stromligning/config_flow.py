@@ -1,6 +1,7 @@
 """Configure Strømligning using stable product IDs."""
 
 import math
+from types import SimpleNamespace
 from typing import Any
 
 import voluptuous as vol
@@ -17,6 +18,7 @@ from homeassistant.helpers.selector import (
 )
 from pystromligning import Aggregation
 from pystromligning.exceptions import (
+    FixedPriceRequired,
     InvalidAPIKey,
     InvalidAPIResponse,
     TooManyRequests,
@@ -35,6 +37,8 @@ from .const import (
 )
 from .location import home_coordinates
 
+REMOVE_API_KEY = "remove_api_key"
+
 
 def configuration_identity(options: dict) -> str:
     """Identify a product, resolution, and forecast variant at HA's location."""
@@ -50,29 +54,23 @@ def duplicate_entry(hass, options, exclude=None):
     )
 
 
-def api_key_field(options):
-    """Return an optional, masked API key field prefilled with the saved key."""
-    return {
-        vol.Optional(
-            CONF_API_KEY,
-            description={"suggested_value": options.get(CONF_API_KEY)},
-        ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+def api_key_fields(has_key: bool = False) -> dict:
+    """Let users change a key without including it in the form."""
+    fields = {
+        vol.Optional(CONF_API_KEY): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.PASSWORD)
+        )
     }
-
-
-def clean_api_key(options):
-    """Strip the API key and drop it when empty, so requests stay anonymous."""
-    options = dict(options)
-    key = options.pop(CONF_API_KEY, None)
-    if isinstance(key, str) and key.strip():
-        options[CONF_API_KEY] = key.strip()
-    return options
+    if has_key:
+        fields[vol.Optional(REMOVE_API_KEY, default=False)] = bool
+    return fields
 
 
 def schema(companies, options):
     """Keep product IDs as values even when display names are identical."""
+    key_fields = api_key_fields(bool(options.get(CONF_API_KEY)))
     if not companies:
-        return vol.Schema(api_key_field(options))
+        return vol.Schema(key_fields)
     return vol.Schema(
         {
             vol.Required(
@@ -85,13 +83,16 @@ def schema(companies, options):
                 CONF_FORECASTS,
                 default=options.get(CONF_FORECASTS, False),
             ): bool,
-            **api_key_field(options),
+            **key_fields,
         }
     )
 
 
 async def discover(hass, options):
     """Resolve supplier and products with the blocking library in the executor."""
+    key = options.get(CONF_API_KEY)
+    if key and any(not 33 <= ord(character) <= 126 for character in key):
+        raise InvalidAPIKey("The API key contains invalid characters")
     api = create_client(hass, options)
     latitude, longitude = home_coordinates(hass)
     await hass.async_add_executor_job(api.set_location, latitude, longitude)
@@ -102,15 +103,12 @@ async def discover(hass, options):
 
 async def validate(hass, api, options):
     """Fetch and validate current prices before saving the selected product."""
-    from types import SimpleNamespace
-
-    connector = StromligningAPI(hass, SimpleNamespace(options=options), 5, 0)
-    connector._data = api
+    connector = StromligningAPI(hass, SimpleNamespace(options=options), 5, 0, api)
     api.set_company(options[CONF_COMPANY])
     if not api.company:
         raise InvalidAPIResponse("Selected product is unavailable")
-    api.set_aggregation(options[CONF_AGGREGATION])
-    api.set_forecast(options[CONF_FORECASTS])
+    api.set_aggregation(options.get(CONF_AGGREGATION, "1h"))
+    api.set_forecast(options.get(CONF_FORECASTS, False))
     set_electricity_price(api, options)
     await connector.update_prices()
 
@@ -126,6 +124,18 @@ def electricity_price(value):
 
 class FixedPriceFlow:
     """Collect the agreed price before validating a fixed-price product."""
+
+    _discovered_options: dict | None = None
+
+    @staticmethod
+    def _with_api_key(user_input, previous):
+        """Carry a key through discovery without exposing it in the form."""
+        options = dict(user_input)
+        remove_key = options.pop(REMOVE_API_KEY, False)
+        new_key = options.pop(CONF_API_KEY, "").strip()
+        if not remove_key and (key := new_key or previous.get(CONF_API_KEY)):
+            options[CONF_API_KEY] = key
+        return options
 
     def _start_fixed_price(self, api, options, previous=None):
         self._price_api = api
@@ -174,7 +184,13 @@ class FixedPriceFlow:
                 try:
                     return await self._async_save(self._price_api, self._price_options)
                 except InvalidAPIKey:
-                    errors["base"] = "invalid_api_key"
+                    return self.async_show_form(
+                        step_id=self._settings_step,
+                        data_schema=schema(
+                            self._price_api.available_companies, self._price_options
+                        ),
+                        errors={"base": "invalid_api_key"},
+                    )
                 except TooManyRequests:
                     errors["base"] = "too_many_requests"
                 except (
@@ -193,26 +209,33 @@ class FixedPriceFlow:
 class StromligningOptionsFlow(FixedPriceFlow, config_entries.OptionsFlowWithReload):
     """Validate options before Home Assistant reloads the entry."""
 
+    _settings_step = "init"
+
     async def async_step_init(self, user_input: Any | None = None):
         """Show and save settings, retaining any legacy option keys."""
         errors = {}
         companies = []
-        if user_input is not None:
-            user_input = clean_api_key(user_input)
+        previous = (
+            self.config_entry.options
+            if self._discovered_options is None
+            else self._discovered_options
+        )
+        options = (
+            previous if user_input is None else self._with_api_key(user_input, previous)
+        )
         try:
-            api = await discover(self.hass, user_input or self.config_entry.options)
+            api = await discover(self.hass, options)
             companies = api.available_companies
-            if user_input is not None and CONF_COMPANY in user_input:
-                if duplicate_entry(self.hass, user_input, self.config_entry.entry_id):
+            if user_input is not None and CONF_COMPANY in options:
+                if duplicate_entry(self.hass, options, self.config_entry.entry_id):
                     errors["base"] = "already_configured"
                 else:
-                    api.set_company(user_input[CONF_COMPANY])
+                    api.set_company(options[CONF_COMPANY])
                     if api.company.get("productType") == "fixed":
-                        self._start_fixed_price(
-                            api, user_input, self.config_entry.options
-                        )
+                        self._start_fixed_price(api, options, self.config_entry.options)
                         return await self.async_step_fixed_price()
-                    return await self._async_save(api, user_input)
+                    return await self._async_save(api, options)
+            self._discovered_options = options
         except InvalidAPIKey:
             errors["base"] = "invalid_api_key"
         except TooManyRequests:
@@ -229,7 +252,7 @@ class StromligningOptionsFlow(FixedPriceFlow, config_entries.OptionsFlowWithRelo
             errors["base"] = "cannot_connect"
         return self.async_show_form(
             step_id="init",
-            data_schema=schema(companies, user_input or self.config_entry.options),
+            data_schema=schema(companies, {**self.config_entry.options, **options}),
             errors=errors,
         )
 
@@ -256,6 +279,7 @@ class StromligningConfigFlow(FixedPriceFlow, config_entries.ConfigFlow, domain=D
     """Configure multiple distinct product/resolution/forecast combinations."""
 
     VERSION = 2
+    _settings_step = "user"
 
     @staticmethod
     @callback
@@ -267,21 +291,24 @@ class StromligningConfigFlow(FixedPriceFlow, config_entries.ConfigFlow, domain=D
         """Resolve products, reject duplicates, and test current price retrieval."""
         errors = {}
         companies = []
-        if user_input is not None:
-            user_input = clean_api_key(user_input)
+        previous = {} if self._discovered_options is None else self._discovered_options
+        options = (
+            previous if user_input is None else self._with_api_key(user_input, previous)
+        )
         try:
-            api = await discover(self.hass, user_input or {})
+            api = await discover(self.hass, options)
             companies = api.available_companies
-            if user_input is not None and CONF_COMPANY in user_input:
-                await self.async_set_unique_id(configuration_identity(user_input))
+            if user_input is not None and CONF_COMPANY in options:
+                await self.async_set_unique_id(configuration_identity(options))
                 self._abort_if_unique_id_configured()
-                if duplicate_entry(self.hass, user_input):
+                if duplicate_entry(self.hass, options):
                     return self.async_abort(reason="already_configured")
-                api.set_company(user_input[CONF_COMPANY])
+                api.set_company(options[CONF_COMPANY])
                 if api.company.get("productType") == "fixed":
-                    self._start_fixed_price(api, user_input)
+                    self._start_fixed_price(api, options)
                     return await self.async_step_fixed_price()
-                return await self._async_save(api, user_input)
+                return await self._async_save(api, options)
+            self._discovered_options = options
         except InvalidAPIKey:
             errors["base"] = "invalid_api_key"
         except TooManyRequests:
@@ -298,7 +325,7 @@ class StromligningConfigFlow(FixedPriceFlow, config_entries.ConfigFlow, domain=D
             errors["base"] = "cannot_connect"
         return self.async_show_form(
             step_id="user",
-            data_schema=schema(companies, user_input or {}),
+            data_schema=schema(companies, options),
             errors=errors,
         )
 
@@ -326,13 +353,16 @@ class StromligningConfigFlow(FixedPriceFlow, config_entries.ConfigFlow, domain=D
         entry = self._get_reauth_entry()
         errors = {}
         if user_input is not None:
-            options = clean_api_key({**entry.options, **user_input})
-            if CONF_API_KEY not in user_input:
-                options.pop(CONF_API_KEY, None)
+            options = dict(entry.options)
+            options.pop(CONF_API_KEY, None)
+            options.update(self._with_api_key(user_input, {}))
             try:
-                await discover(self.hass, options)
+                api = await discover(self.hass, options)
+                await validate(self.hass, api, options)
             except InvalidAPIKey:
                 errors["base"] = "invalid_api_key"
+            except FixedPriceRequired:
+                errors["base"] = "fixed_price_required"
             except TooManyRequests:
                 errors["base"] = "too_many_requests"
             except (
@@ -349,6 +379,6 @@ class StromligningConfigFlow(FixedPriceFlow, config_entries.ConfigFlow, domain=D
                 return self.async_update_reload_and_abort(entry, options=options)
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=vol.Schema(api_key_field({})),
+            data_schema=vol.Schema(api_key_fields()),
             errors=errors,
         )

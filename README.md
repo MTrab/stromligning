@@ -57,10 +57,10 @@ entity IDs are preserved.
 You can enter a personal API key from
 [stromligning.dk/bruger/api-noegler](https://stromligning.dk/bruger/api-noegler)
 during setup or in the integration options. With a key, the API counts its rate
-limits per key instead of per IP address. Leave the field empty to use the API
-without a key. If the API rejects the saved key, Home Assistant asks for a new
-one; leaving that field empty also continues without a key. The key is stored in
-the config entry and is never logged.
+limits per key instead of per IP address. In the integration options, leave the
+field empty to keep a saved key or select **Remove saved API key** to continue
+without one. If the API rejects the saved key, Home Assistant asks for a new key.
+Leave that reauthentication field empty to continue without a key.
 
 ## Spot price forecasts
 

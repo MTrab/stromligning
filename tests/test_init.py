@@ -1113,6 +1113,8 @@ def keyed_library(library, monkeypatch):
 
     def keyed_update(client, start):
         check(client)
+        if client._headers().get("Authorization") == "Bearer prices-bad":
+            raise InvalidAPIKey("rejected by prices")
         update(client, start)
 
     monkeypatch.setattr(Stromligning, "set_location", keyed_location)
@@ -1129,7 +1131,7 @@ async def test_setup_sends_user_agent_and_optional_key(
     from homeassistant.const import __version__ as ha_version
     from pystromligning import LIBRARY_USER_AGENT
 
-    options = {} if key is None else {"api_key": key.strip()}
+    options = {} if key is None else {"api_key": key}
     entry = await add_entry(integration_hass, legacy_entry(**options))
     assert entry.state is config_entries.ConfigEntryState.LOADED
     headers = entry.runtime_data.api._data._headers()
@@ -1159,32 +1161,42 @@ async def test_config_flow_api_key(integration_hass, keyed_library):
         result["flow_id"], {"api_key": " good "}
     )
     assert result["type"] == "form"
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {**options, "api_key": " good "}
-    )
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], options)
     assert result["type"] == "create_entry"
     assert result["result"].options == {**options, "api_key": "good"}
     await hass.async_block_till_done()
 
 
 @pytest.mark.asyncio
-async def test_options_clear_api_key(integration_hass, keyed_library):
-    """Leaving the key empty in the options removes the saved key."""
+@pytest.mark.parametrize("remove", [False, True])
+async def test_options_keep_or_remove_api_key(integration_hass, keyed_library, remove):
+    """Keep the key private and remove it only on explicit request."""
     hass = integration_hass
     entry = await add_entry(hass, legacy_entry(api_key="good"))
     result = await hass.config_entries.options.async_init(entry.entry_id)
+    fields = {str(key): key for key in result["data_schema"].schema}
+    assert not fields["api_key"].description
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {"company": "product", "aggregation": "1h", "forecasts": False},
+        {
+            "company": "product",
+            "aggregation": "1h",
+            "forecasts": False,
+            "remove_api_key": remove,
+        },
     )
     assert result["type"] == "create_entry"
     await hass.async_block_till_done()
-    assert "api_key" not in entry.options
-    assert "Authorization" not in entry.runtime_data.api._data._headers()
+    assert "remove_api_key" not in entry.options
+    assert entry.options.get("api_key") == (None if remove else "good")
+    assert entry.runtime_data.api._data._headers().get("Authorization") == (
+        None if remove else "Bearer good"
+    )
 
 
 @pytest.mark.asyncio
-async def test_rejected_key_starts_reauth(integration_hass, keyed_library):
+@pytest.mark.parametrize("replacement", ["good", None])
+async def test_rejected_key_starts_reauth(integration_hass, keyed_library, replacement):
     """A rejected key fails setup with reauth, and a new key reloads the entry."""
     hass = integration_hass
     entry = await add_entry(hass, legacy_entry(api_key="bad"))
@@ -1192,14 +1204,18 @@ async def test_rejected_key_starts_reauth(integration_hass, keyed_library):
     flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
     assert [flow["context"]["source"] for flow in flows] == ["reauth"]
     flow_id = flows[0]["flow_id"]
-    result = await hass.config_entries.flow.async_configure(flow_id, {"api_key": "bad"})
-    assert result["errors"] == {"base": "invalid_api_key"}
+    for invalid in ("bad", "prices-bad", "invalid\nkey"):
+        result = await hass.config_entries.flow.async_configure(
+            flow_id, {"api_key": invalid}
+        )
+        assert result["errors"] == {"base": "invalid_api_key"}
+        assert entry.options["api_key"] == "bad"
     result = await hass.config_entries.flow.async_configure(
-        flow_id, {"api_key": "good"}
+        flow_id, {} if replacement is None else {"api_key": replacement}
     )
     assert result["type"] == "abort"
     assert result["reason"] == "reauth_successful"
     await hass.async_block_till_done()
-    assert entry.options["api_key"] == "good"
+    assert entry.options.get("api_key") == replacement
     assert entry.options["company"] == "product"
     assert entry.state is config_entries.ConfigEntryState.LOADED

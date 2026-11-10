@@ -9,7 +9,8 @@
             "cannot_connect": "Unable to retrieve valid prices or products. Check the location and try again.",
             "already_configured": "This product, resolution and forecast combination is already configured",
             "invalid_price": "Enter a finite price of zero or more.",
-            "invalid_api_key": "The API key was rejected. Check it, or leave the field empty to continue without a key."
+            "fixed_price_required": "Enter your agreed fixed electricity price in the integration options.",
+            "invalid_api_key": "The API key was rejected. Check the key and try again."
         },
         "step": {
             "user": {
@@ -48,7 +49,7 @@
             "cannot_connect": "Unable to retrieve valid prices or products. Check the location and try again.",
             "already_configured": "This product, resolution and forecast combination is already configured",
             "invalid_price": "Enter a finite price of zero or more.",
-            "invalid_api_key": "The API key was rejected. Check it, or leave the field empty to continue without a key."
+            "invalid_api_key": "The API key was rejected. Check the key and try again."
         },
         "step": {
             "init": {
@@ -56,10 +57,11 @@
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
                     "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
+                    "remove_api_key": "Remove saved API key",
                     "api_key": "API key (optional)"
                 },
                 "data_description": {
-                    "api_key": "Optional. Create a personal API key at stromligning.dk/bruger/api-noegler. Requests with a key are rate limited per key instead of per IP address."
+                    "api_key": "Leave empty to keep the saved key. Enter a new key to replace it."
                 }
             },
             "fixed_price": {
