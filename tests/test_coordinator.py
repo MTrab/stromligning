@@ -119,6 +119,25 @@ async def test_fetch_and_rollover_are_serialized(runtime):
 
 
 @pytest.mark.asyncio
+async def test_missing_sale_prices_schedule_midnight_refresh(runtime, monkeypatch):
+    """Refresh at midnight if only consumption prices are available for tomorrow."""
+    _, coordinator, api = runtime
+    now = datetime(2026, 2, 24, 18, tzinfo=UTC)
+    monkeypatch.setattr(
+        "custom_components.stromligning.coordinator.dt_utils.now", lambda: now
+    )
+    api._entry.options["production_prices"] = True
+    api.tomorrow_available = True
+    midnight = datetime(2026, 2, 25, tzinfo=UTC)
+    assert coordinator._next_deadline() == midnight + timedelta(seconds=1)
+
+    api._production_snapshot = [{"date": midnight}]
+    assert coordinator._next_deadline() == midnight + timedelta(
+        hours=13, minutes=12, seconds=34
+    )
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("aggregation,minute", [("1h", 0), ("15m", 45)])
 async def test_retry_deadline_matches_display(
     runtime, monkeypatch, aggregation, minute

@@ -90,6 +90,9 @@ the production tariffs from Energinet and your grid supplier. In
 periods in the selected resolution. Prices come from the API's
 `/prices/production` endpoint for the grid supplier at Home Assistant's home
 location, which is one extra request per update. The setting is off by default.
+If sale prices are temporarily unavailable, the integration retries them and
+continues updating consumption prices. The sale price sensors use cached values
+only while they cover the current period.
 
 ## Use the custom template to show the next x cheapest hours
 
