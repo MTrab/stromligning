@@ -21,6 +21,8 @@ def _build_api(mock_hass, mock_entry, prices: list[dict]) -> StromligningAPI:
     api.prices_forecasts = []
     api.forecast_data = False
     api.tomorrow_available = False
+    api.production_today = []
+    api._production_snapshot = []
     api._snapshot = [
         {**price, "date": datetime.fromisoformat(price["date"])} for price in prices
     ]

@@ -12,7 +12,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_loaded_integration
 from homeassistant.util import dt as dt_utils
 from pystromligning import Stromligning
-from pystromligning.exceptions import FixedPriceRequired, InvalidAPIResponse
+from pystromligning.exceptions import (
+    FixedPriceRequired,
+    InvalidAPIKey,
+    InvalidAPIResponse,
+    TooManyRequests,
+)
+from requests.exceptions import RequestException
 
 from .const import (
     CONF_AGGREGATION,
@@ -20,6 +26,7 @@ from .const import (
     CONF_COMPANY,
     CONF_ELECTRICITY_PRICE,
     CONF_FORECASTS,
+    CONF_PRODUCTION_PRICES,
     DOMAIN,
 )
 from .location import home_coordinates
@@ -81,6 +88,9 @@ class StromligningAPI:
         self.prices_forecasts = []
         self.forecast_data = False
         self._snapshot = []
+        self.production_today: list = []
+        self._production_snapshot: list = []
+        self.production_retry_at: datetime | None = None
         self.scheduled_update = None
 
         self.last_update: datetime | None = None
@@ -125,17 +135,71 @@ class StromligningAPI:
             .replace("+00:00", ".000Z")
         )
         await self.hass.async_add_executor_job(self._data.update, today_midnight_utc)
-        snapshot = deepcopy(self._data.prices)
         try:
-            for price in snapshot:
-                value = price["date"]
-                start = (
-                    datetime.fromisoformat(value) if isinstance(value, str) else value
-                )
-                if start.tzinfo is None:
-                    raise ValueError("Naive price timestamp")
-                price["date"] = dt_utils.as_local(start)
-                amounts = [price["price"]]
+            snapshot = self._validated_snapshot(self._data.prices)
+        except (KeyError, TypeError, ValueError, AttributeError, OverflowError) as err:
+            raise InvalidAPIResponse("Invalid price dataset") from err
+        if self._find_period(snapshot, dt_utils.as_utc(dt_utils.now())) is None:
+            raise InvalidAPIResponse("No price for the current period")
+        await self._refresh_production(today_midnight_utc)
+        self._snapshot = snapshot
+        await self.prepare_data()
+        self.last_update = dt_utils.now()
+
+    @property
+    def production_enabled(self) -> bool:
+        """Return whether sale prices for surplus production are configured."""
+        return bool(self._entry.options.get(CONF_PRODUCTION_PRICES, False))
+
+    def has_production_price_at(self, instant: datetime) -> bool:
+        """Check if a cached sale price covers the supplied instant."""
+        return self._find_period(self._production_snapshot, instant) is not None
+
+    async def _refresh_production(self, start: str) -> None:
+        """Keep optional sale price failures separate from consumption prices."""
+        if not self.production_enabled or (
+            self.production_retry_at is not None
+            and dt_utils.utcnow() < self.production_retry_at
+        ):
+            return
+        try:
+            self._production_snapshot = await self._update_production(start)
+        except InvalidAPIKey:
+            raise
+        except TooManyRequests:
+            self.production_retry_at = dt_utils.utcnow() + timedelta(minutes=15)
+        except InvalidAPIResponse, RequestException, TimeoutError:
+            if self.production_retry_at is None:
+                LOGGER.warning("Unable to retrieve valid electricity sale prices")
+            self.production_retry_at = dt_utils.utcnow() + self.period_length
+        else:
+            self.production_retry_at = None
+
+    async def _update_production(self, start: str) -> list:
+        """Fetch and validate the current sale prices."""
+        try:
+            await self.hass.async_add_executor_job(self._data.update_production, start)
+            snapshot = self._validated_snapshot(
+                self._data.production_prices, production=True
+            )
+        except (KeyError, TypeError, ValueError, AttributeError, OverflowError) as err:
+            raise InvalidAPIResponse("Invalid production price dataset") from err
+        if self._find_period(snapshot, dt_utils.as_utc(dt_utils.now())) is None:
+            raise InvalidAPIResponse("No production price for the current period")
+        return snapshot
+
+    @staticmethod
+    def _validated_snapshot(prices: list, *, production: bool = False) -> list:
+        """Copy, normalize and validate a dataset before publishing it."""
+        snapshot = deepcopy(prices)
+        for price in snapshot:
+            value = price["date"]
+            start = datetime.fromisoformat(value) if isinstance(value, str) else value
+            if start.tzinfo is None:
+                raise ValueError("Naive price timestamp")
+            price["date"] = dt_utils.as_local(start)
+            amounts = [price["price"]]
+            if not production:
                 amounts.extend(
                     price["details"][key]
                     for key in (
@@ -149,25 +213,19 @@ class StromligningAPI:
                     price["details"]["transmission"][key]
                     for key in ("systemTariff", "netTariff")
                 )
-                for amount in amounts:
-                    for key in ("value", "total"):
-                        if isinstance(amount[key], bool) or not isinstance(
-                            amount[key], (int, float)
-                        ):
-                            raise TypeError("Non-numeric price")
-                        if not math.isfinite(amount[key]):
-                            raise ValueError("Non-finite price")
-            snapshot.sort(key=lambda price: dt_utils.as_utc(price["date"]))
-            starts = [dt_utils.as_utc(price["date"]) for price in snapshot]
-            if len(starts) != len(set(starts)):
-                raise ValueError("Duplicate periods")
-        except (KeyError, TypeError, ValueError, AttributeError) as err:
-            raise InvalidAPIResponse("Invalid price dataset") from err
-        if self._find_period(snapshot, dt_utils.as_utc(dt_utils.now())) is None:
-            raise InvalidAPIResponse("No price for the current period")
-        self._snapshot = snapshot
-        await self.prepare_data()
-        self.last_update = dt_utils.now()
+            for amount in amounts:
+                for key in ("value", "total"):
+                    if isinstance(amount[key], bool) or not isinstance(
+                        amount[key], (int, float)
+                    ):
+                        raise TypeError("Non-numeric price")
+                    if not math.isfinite(amount[key]):
+                        raise ValueError("Non-finite price")
+        snapshot.sort(key=lambda price: dt_utils.as_utc(price["date"]))
+        starts = [dt_utils.as_utc(price["date"]) for price in snapshot]
+        if len(starts) != len(set(starts)):
+            raise ValueError("Duplicate periods")
+        return snapshot
 
     async def prepare_data(self) -> None:
         """Rebucket the last successful snapshot without mutating library data."""
@@ -187,6 +245,11 @@ class StromligningAPI:
         ]
         self.prices_forecasts = [
             price for price in self._snapshot if dt_utils.as_utc(price["date"]) >= day3
+        ]
+        self.production_today = [
+            price
+            for price in self._production_snapshot
+            if today <= dt_utils.as_utc(price["date"]) < tomorrow
         ]
         self.forecast_data = any(
             price.get("forecast", False) for price in self.prices_tomorrow
@@ -235,6 +298,15 @@ class StromligningAPI:
     def get_current(self, vat: bool = True) -> float | None:
         """Return the current total price."""
         return self._current_value(("price",), vat)
+
+    def get_production(self, vat: bool = True) -> float | None:
+        """Return the current sale price for surplus production."""
+        price = self._find_period(
+            self.production_today, dt_utils.as_utc(dt_utils.now())
+        )
+        if price is None:
+            return None
+        return price["price"]["total" if vat else "value"]
 
     def get_forecasts(self, vat: bool = True) -> datetime | None:
         """Get forecasts."""

@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_utils
 from pystromligning import Stromligning
-from pystromligning.exceptions import TooManyRequests
+from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
 
 from custom_components.stromligning.const import DOMAIN
 from test_periods import day_records
@@ -372,7 +372,13 @@ async def test_config_flow_product_ids_and_duplicates(integration_hass, library)
         "product": "Provider - Product",
         "other": "Provider - Product",
     }
-    options = {"company": "product", "aggregation": "15m", "forecasts": True}
+    assert "production_prices" in fields
+    options = {
+        "company": "product",
+        "aggregation": "15m",
+        "forecasts": True,
+        "production_prices": False,
+    }
     result = await hass.config_entries.flow.async_configure(result["flow_id"], options)
     assert result["type"] == "create_entry"
     entry = result["result"]
@@ -1151,7 +1157,12 @@ async def test_config_flow_api_key(integration_hass, keyed_library):
     )
     fields = {str(key): key for key in result["data_schema"].schema}
     assert "api_key" in fields
-    options = {"company": "product", "aggregation": "1h", "forecasts": False}
+    options = {
+        "company": "product",
+        "aggregation": "1h",
+        "forecasts": False,
+        "production_prices": False,
+    }
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {**options, "api_key": "bad"}
     )
@@ -1219,3 +1230,123 @@ async def test_rejected_key_starts_reauth(integration_hass, keyed_library, repla
     assert entry.options.get("api_key") == replacement
     assert entry.options["company"] == "product"
     assert entry.state is config_entries.ConfigEntryState.LOADED
+
+
+@pytest.fixture
+def production_library(library, monkeypatch):
+    """Return sale prices for the configured grid supplier."""
+
+    def update_production(client, start):
+        library.update_production(start)
+        midnight = dt_utils.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        client.production_prices = [
+            {"date": record["date"], "price": {"value": value, "total": value + 0.25}}
+            for value, record in enumerate(day_records(midnight, client.aggregation))
+        ]
+
+    monkeypatch.setattr(Stromligning, "update_production", update_production)
+    return library
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("enabled", [False, True])
+async def test_production_price_setup(integration_hass, production_library, enabled):
+    """Create sale price sensors and request them only when enabled."""
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry(production_prices=enabled))
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    registry = er.async_get(hass)
+    for suffix, disabled in [
+        ("vat", None),
+        ("ex_vat", er.RegistryEntryDisabler.INTEGRATION),
+    ]:
+        entity_id = f"sensor.my_existing_prices_production_price_{suffix}"
+        registered = registry.async_get(entity_id)
+        if not enabled:
+            assert registered is None
+            continue
+        assert (
+            registered.unique_id
+            == f"production_price_{suffix}_{entry.entry_id}".lower()
+        )
+        assert registered.disabled_by is disabled
+    if not enabled:
+        production_library.update_production.assert_not_called()
+        return
+    production_library.update_production.assert_called_once()
+    api = entry.runtime_data.api
+    current = api._find_period(api.production_today, dt_utils.utcnow())
+    state = hass.states.get("sensor.my_existing_prices_production_price_vat")
+    assert float(state.state) == current["price"]["total"]
+    assert api.get_production(False) == current["price"]["value"]
+    assert len(state.attributes["prices"]) == len(api.production_today)
+    assert state.attributes["prices"][0]["price"] == 0.25
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error", [InvalidAPIResponse, TooManyRequests])
+async def test_production_failure_preserves_consumption(
+    integration_hass, production_library, error
+):
+    """An optional endpoint failure leaves consumption usable and retries sale prices."""
+    hass = integration_hass
+    production_library.update_production.side_effect = error
+    entry = await add_entry(hass, legacy_entry(production_prices=True))
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    consumption = "sensor.my_existing_prices_current_price_vat"
+    production = "sensor.my_existing_prices_production_price_vat"
+    assert hass.states.get(consumption).state not in ("unknown", "unavailable")
+    assert hass.states.get(production).state == "unavailable"
+    coordinator = entry.runtime_data
+    retry = coordinator.api.production_retry_at
+    assert retry is not None
+    assert coordinator.api.scheduled_update <= retry
+    await coordinator.async_refresh()
+    production_library.update_production.assert_called_once()
+
+    production_library.update_production.side_effect = None
+    coordinator.api.production_retry_at = dt_utils.utcnow()
+    await coordinator.async_refresh()
+    assert coordinator.api.production_retry_at is None
+    assert float(hass.states.get(production).state) == coordinator.api.get_production()
+    assert hass.states.get(consumption).state not in ("unknown", "unavailable")
+
+    price = hass.states.get(production).state
+    production_library.update_production.side_effect = error
+    await coordinator.async_refresh()
+    assert hass.states.get(production).state == price
+    assert coordinator.last_update_success
+
+
+@pytest.mark.asyncio
+async def test_reauth_checks_enabled_production(
+    integration_hass, keyed_library, production_library, monkeypatch
+):
+    """Reject a replacement key when the enabled sale price request rejects it."""
+    from pystromligning.exceptions import InvalidAPIKey
+
+    update_production = Stromligning.update_production
+
+    def reject_key(client, start):
+        if client._headers().get("Authorization") == "Bearer production-bad":
+            raise InvalidAPIKey("rejected by production prices")
+        update_production(client, start)
+
+    monkeypatch.setattr(Stromligning, "update_production", reject_key)
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry(api_key="bad", production_prices=True))
+    (flow,) = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    flow_id = flow["flow_id"]
+    result = await hass.config_entries.flow.async_configure(
+        flow_id, {"api_key": "production-bad"}
+    )
+    assert result["errors"] == {"base": "invalid_api_key"}
+    assert entry.options["api_key"] == "bad"
+    result = await hass.config_entries.flow.async_configure(
+        flow_id, {"api_key": "good"}
+    )
+    assert result["reason"] == "reauth_successful"
+    await hass.async_block_till_done()
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    assert entry.options["api_key"] == "good"
+    assert entry.options["production_prices"]
