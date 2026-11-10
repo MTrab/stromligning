@@ -7,7 +7,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.util import dt as dt_utils
 
-from .api import StromligningAPI
+from .api import StromligningAPI, create_client
 from .const import DOMAIN, PLATFORMS
 from .coordinator import StromligningConfigEntry, StromligningCoordinator
 
@@ -39,7 +39,13 @@ async def async_setup_entry(
     hass.config_entries.async_update_entry(
         entry, unique_id=_entry_identity(hass, entry)
     )
-    api = StromligningAPI(hass, entry, randint(5, 40), randint(0, 59))
+    api = StromligningAPI(
+        hass,
+        entry,
+        randint(5, 40),
+        randint(0, 59),
+        create_client(hass, entry.options),
+    )
     coordinator = StromligningCoordinator(hass, entry, api)
     entry.runtime_data = coordinator
     entry.async_on_unload(coordinator.close)

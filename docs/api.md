@@ -24,3 +24,9 @@ Library requests have a 60-second timeout. The library also supports
 production API.
 
 The manifest and test requirements use `pystromligning==0.2.0` from PyPI.
+
+Every request sends `User-Agent: HomeAssistant-Stromligning/<integration version>
+HomeAssistant/<Home Assistant version> pystromligning/<library version>`. An
+optional API key is sent as `Authorization: Bearer <key>`. HTTP 401 means the key
+is invalid, deactivated or expired; the integration then starts Home Assistant's
+reauthentication flow.
