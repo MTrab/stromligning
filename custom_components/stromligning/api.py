@@ -7,20 +7,34 @@ import math
 from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import __version__ as HA_VERSION
 from homeassistant.core import HomeAssistant
+from homeassistant.loader import async_get_loaded_integration
 from homeassistant.util import dt as dt_utils
 from pystromligning import Stromligning
 from pystromligning.exceptions import FixedPriceRequired, InvalidAPIResponse
 
 from .const import (
     CONF_AGGREGATION,
+    CONF_API_KEY,
     CONF_COMPANY,
     CONF_ELECTRICITY_PRICE,
     CONF_FORECASTS,
+    DOMAIN,
 )
 from .location import home_coordinates
 
 LOGGER = logging.getLogger(__name__)
+
+
+def create_client(hass: HomeAssistant, options: dict) -> Stromligning:
+    """Create a library client that identifies the integration and HA version."""
+    version = async_get_loaded_integration(hass, DOMAIN).version
+    return Stromligning(
+        False,
+        api_key=options.get(CONF_API_KEY),
+        user_agent=f"HomeAssistant-Stromligning/{version} HomeAssistant/{HA_VERSION}",
+    )
 
 
 def set_electricity_price(api: Stromligning, options: dict) -> None:
@@ -43,7 +57,12 @@ class StromligningAPI:
     """An object to store Stromligning API date."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, rand_min: int, rand_sec: int
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry,
+        rand_min: int,
+        rand_sec: int,
+        client: Stromligning | None = None,
     ) -> None:
         """Initialize the Stromligning connector object."""
         self.next_update = f"13:{rand_min}:{rand_sec}"
@@ -52,7 +71,7 @@ class StromligningAPI:
 
         self.hass = hass
 
-        self._data = Stromligning(False)
+        self._data = client if client is not None else Stromligning(False)
 
         self.prices_today: list = []
         self.prices_tomorrow: list = []

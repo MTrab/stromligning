@@ -52,6 +52,16 @@ These details update when options change. Device names, integration titles,
 and entity IDs do not include the agreement or settings. Existing names and
 entity IDs are preserved.
 
+### API key (optional)
+
+You can enter a personal API key from
+[stromligning.dk/bruger/api-noegler](https://stromligning.dk/bruger/api-noegler)
+during setup or in the integration options. With a key, the API counts its rate
+limits per key instead of per IP address. Leave the field empty to use the API
+without a key. If the API rejects the saved key, Home Assistant asks for a new
+one; leaving that field empty also continues without a key. The key is stored in
+the config entry and is never logged.
+
 ## Spot price forecasts
 
 Enable forecasts in the integration options to create `forecasts_spotprice_vat`
