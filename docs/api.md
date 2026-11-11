@@ -23,7 +23,7 @@ Library requests have a 60-second timeout. The library also supports
 `https://staging.stromligning.dk/api` for development; this integration uses the
 production API.
 
-The manifest and test requirements use `pystromligning==0.2.0` from PyPI.
+The manifest and test requirements use `pystromligning==0.3.0` from PyPI.
 
 Every request sends `User-Agent: HomeAssistant-Stromligning/<integration version>
 HomeAssistant/<Home Assistant version> pystromligning/<library version>`. An

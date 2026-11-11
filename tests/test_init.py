@@ -1203,3 +1203,125 @@ async def test_rejected_key_starts_reauth(integration_hass, keyed_library):
     assert entry.options["api_key"] == "good"
     assert entry.options["company"] == "product"
     assert entry.state is config_entries.ConfigEntryState.LOADED
+
+
+@pytest.fixture
+def price_key_library(library, monkeypatch):
+    """Allow discovery but reject a bad key when current prices are requested."""
+    from pystromligning.exceptions import InvalidAPIKey
+
+    original_update = Stromligning.update
+
+    def update(client, start):
+        library.price_options = (
+            client.company["id"],
+            client.aggregation,
+            client.forecast,
+            client.electricity_price,
+        )
+        if client._headers().get("Authorization") == "Bearer bad":
+            library.rejected_prices()
+            raise InvalidAPIKey("rejected")
+        original_update(client, start)
+
+    monkeypatch.setattr(Stromligning, "update", update)
+    return library
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("company", ["product", "fixed"])
+@pytest.mark.parametrize("replacement", ["good", "", None])
+async def test_reauth_validates_prices_before_saving(
+    integration_hass, fixed_library, price_key_library, company, replacement
+):
+    """A prices-only rejection keeps saved options until a usable key is tested."""
+    hass = integration_hass
+    entry = await add_entry(
+        hass, legacy_entry(company, api_key="bad", electricity_price=1.25)
+    )
+    original_options = dict(entry.options)
+    flow = hass.config_entries.flow.async_progress_by_handler(DOMAIN)[0]
+    price_key_library.rejected_prices.reset_mock()
+    location_calls = price_key_library.location.call_count
+    result = await hass.config_entries.flow.async_configure(
+        flow["flow_id"], {"api_key": "bad"}
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == "reauth_confirm"
+    assert result["errors"] == {"base": "invalid_api_key"}
+    assert dict(entry.options) == original_options
+    assert entry.state is config_entries.ConfigEntryState.SETUP_ERROR
+    assert price_key_library.location.call_count == location_calls + 1
+    price_key_library.rejected_prices.assert_called_once()
+    assert price_key_library.price_options == (
+        company,
+        "1h",
+        False,
+        1 if company == "fixed" else None,
+    )
+    result = await hass.config_entries.flow.async_configure(
+        flow["flow_id"], {} if replacement is None else {"api_key": replacement}
+    )
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    await hass.async_block_till_done()
+    expected = dict(original_options)
+    expected.pop("api_key")
+    if replacement:
+        expected["api_key"] = replacement
+    assert dict(entry.options) == expected
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("source", ["user", "options"])
+@pytest.mark.parametrize("replacement", ["good", ""])
+async def test_fixed_price_rejected_key_returns_to_settings(
+    integration_hass, fixed_library, price_key_library, source, replacement
+):
+    """Both fixed-price flows let users replace or remove a rejected key."""
+    hass = integration_hass
+    options = {
+        "company": "fixed",
+        "aggregation": "1h",
+        "forecasts": False,
+        "api_key": "bad",
+    }
+    entry = None
+    if source == "options":
+        entry = await add_entry(hass, legacy_entry(api_key="old"))
+        original_options = dict(entry.options)
+        manager = hass.config_entries.options
+        result = await manager.async_init(entry.entry_id, data=options)
+    else:
+        manager = hass.config_entries.flow
+        result = await manager.async_init(
+            DOMAIN, context={"source": "user"}, data=options
+        )
+    assert result["step_id"] == "fixed_price"
+    result = await manager.async_configure(
+        result["flow_id"], {"electricity_price": 1.25}
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == ("init" if source == "options" else "user")
+    assert result["errors"] == {"base": "invalid_api_key"}
+    assert "api_key" in {str(key) for key in result["data_schema"].schema}
+    if entry:
+        assert dict(entry.options) == original_options
+    else:
+        assert not hass.config_entries.async_entries(DOMAIN)
+    result = await manager.async_configure(
+        result["flow_id"], {**options, "api_key": replacement}
+    )
+    assert result["step_id"] == "fixed_price"
+    result = await manager.async_configure(
+        result["flow_id"], {"electricity_price": 1.25}
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    if entry is None:
+        entry = result["result"]
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    assert entry.options.get("api_key") == (replacement or None)
+    assert entry.options["company"] == "fixed"
+    assert entry.options["electricity_price"] == 1.25

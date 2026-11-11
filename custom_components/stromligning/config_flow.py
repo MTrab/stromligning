@@ -174,7 +174,13 @@ class FixedPriceFlow:
                 try:
                     return await self._async_save(self._price_api, self._price_options)
                 except InvalidAPIKey:
-                    errors["base"] = "invalid_api_key"
+                    return self.async_show_form(
+                        step_id=self._settings_step_id,
+                        data_schema=schema(
+                            self._price_api.available_companies, self._price_options
+                        ),
+                        errors={"base": "invalid_api_key"},
+                    )
                 except TooManyRequests:
                     errors["base"] = "too_many_requests"
                 except (
@@ -192,6 +198,8 @@ class FixedPriceFlow:
 
 class StromligningOptionsFlow(FixedPriceFlow, config_entries.OptionsFlowWithReload):
     """Validate options before Home Assistant reloads the entry."""
+
+    _settings_step_id = "init"
 
     async def async_step_init(self, user_input: Any | None = None):
         """Show and save settings, retaining any legacy option keys."""
@@ -256,6 +264,7 @@ class StromligningConfigFlow(FixedPriceFlow, config_entries.ConfigFlow, domain=D
     """Configure multiple distinct product/resolution/forecast combinations."""
 
     VERSION = 2
+    _settings_step_id = "user"
 
     @staticmethod
     @callback
@@ -330,7 +339,8 @@ class StromligningConfigFlow(FixedPriceFlow, config_entries.ConfigFlow, domain=D
             if CONF_API_KEY not in user_input:
                 options.pop(CONF_API_KEY, None)
             try:
-                await discover(self.hass, options)
+                api = await discover(self.hass, options)
+                await validate(self.hass, api, options)
             except InvalidAPIKey:
                 errors["base"] = "invalid_api_key"
             except TooManyRequests:
