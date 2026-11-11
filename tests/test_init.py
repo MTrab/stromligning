@@ -13,7 +13,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_utils
 from pystromligning import Stromligning
-from pystromligning.exceptions import TooManyRequests
+from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
+from requests.exceptions import RequestException
 
 from custom_components.stromligning.const import DOMAIN
 from test_periods import day_records
@@ -1111,10 +1112,7 @@ def production_library(library, monkeypatch):
         midnight = dt_utils.now().replace(hour=0, minute=0, second=0, microsecond=0)
         client.production_prices = [
             {"date": record["date"], "price": {"value": value, "total": value + 0.25}}
-            for record, value in zip(
-                day_records(midnight, client.aggregation),
-                range(len(day_records(midnight, client.aggregation))),
-            )
+            for value, record in enumerate(day_records(midnight, client.aggregation))
         ]
 
     monkeypatch.setattr(Stromligning, "update_production", update_production)
@@ -1157,14 +1155,114 @@ async def test_production_price_setup(integration_hass, production_library, enab
 
 
 @pytest.mark.asyncio
-async def test_production_price_failure_retries_setup(
-    integration_hass, production_library, monkeypatch
+@pytest.mark.parametrize(
+    "error", [InvalidAPIResponse, TooManyRequests, TimeoutError, RequestException]
+)
+async def test_production_failure_preserves_consumption(
+    integration_hass, production_library, error
 ):
-    """Missing sale prices fail the update instead of loading stale entities."""
-    monkeypatch.setattr(
-        Stromligning,
-        "update_production",
-        lambda client, start: setattr(client, "production_prices", []),
+    """An optional endpoint failure leaves consumption usable and retries sale prices."""
+    hass = integration_hass
+    production_library.update_production.side_effect = error
+    entry = await add_entry(hass, legacy_entry(production_prices=True))
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    consumption = "sensor.my_existing_prices_current_price_vat"
+    production = "sensor.my_existing_prices_production_price_vat"
+    assert hass.states.get(consumption).state not in ("unknown", "unavailable")
+    assert hass.states.get(production).state == "unavailable"
+    coordinator = entry.runtime_data
+    retry = coordinator.api.production_retry_at
+    assert retry is not None
+    assert coordinator.api.scheduled_update <= retry
+    await coordinator.async_refresh()
+    production_library.update_production.assert_called_once()
+
+    production_library.update_production.side_effect = None
+    coordinator.api.production_retry_at = dt_utils.utcnow()
+    await coordinator.async_refresh()
+    assert coordinator.api.production_retry_at is None
+    assert float(hass.states.get(production).state) == coordinator.api.get_production()
+    assert hass.states.get(consumption).state not in ("unknown", "unavailable")
+
+    price = hass.states.get(production).state
+    production_library.update_production.side_effect = error
+    await coordinator.async_refresh()
+    assert hass.states.get(production).state == price
+    assert coordinator.last_update_success
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "invalid", ["empty", "duplicate", "naive", "nonfinite", "boolean", "missing_price"]
+)
+async def test_malformed_production_does_not_block_setup(
+    integration_hass, production_library, monkeypatch, invalid
+):
+    """Reject malformed sale datasets without rejecting valid consumption data."""
+    original_update = Stromligning.update_production
+
+    def update(client, start):
+        original_update(client, start)
+        prices = client.production_prices
+        if invalid == "empty":
+            prices.clear()
+        elif invalid == "duplicate":
+            prices.append(prices[0])
+        elif invalid == "naive":
+            prices[0]["date"] = "2026-02-24T00:00:00"
+        elif invalid == "nonfinite":
+            prices[0]["price"]["value"] = float("nan")
+        elif invalid == "boolean":
+            prices[0]["price"]["total"] = True
+        elif invalid == "missing_price":
+            del prices[0]["price"]
+
+    monkeypatch.setattr(Stromligning, "update_production", update)
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry(production_prices=True))
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    assert hass.states.get("sensor.my_existing_prices_current_price_vat").state not in (
+        "unknown",
+        "unavailable",
     )
-    entry = await add_entry(integration_hass, legacy_entry(production_prices=True))
-    assert entry.state is config_entries.ConfigEntryState.SETUP_RETRY
+    assert (
+        hass.states.get("sensor.my_existing_prices_production_price_vat").state
+        == "unavailable"
+    )
+    assert entry.runtime_data.api.production_retry_at is not None
+    assert entry.runtime_data.api._production_snapshot == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("aggregation", ["1h", "15m"])
+async def test_cached_production_expires_at_period_boundary(
+    integration_hass, production_library, monkeypatch, aggregation
+):
+    """A failed optional refresh retains the current sale interval until it expires."""
+    from datetime import timedelta
+
+    hass = integration_hass
+    entry = await add_entry(
+        hass, legacy_entry(production_prices=True, aggregation=aggregation)
+    )
+    coordinator = entry.runtime_data
+    api = coordinator.api
+    current = api._find_period(api.production_today, dt_utils.utcnow())
+    api._production_snapshot = [current]
+    production_library.update_production.side_effect = TimeoutError
+    await coordinator.async_refresh()
+    assert api._production_snapshot == [current]
+    production = "sensor.my_existing_prices_production_price_vat"
+    assert float(hass.states.get(production).state) == current["price"]["total"]
+
+    later = current["date"] + api.period_length + timedelta(seconds=1)
+    monkeypatch.setattr(dt_utils, "now", lambda: later)
+    monkeypatch.setattr(dt_utils, "utcnow", lambda: dt_utils.as_utc(later))
+    requests = production_library.update_production.call_count
+    await coordinator._local_update(None)
+    assert hass.states.get(production).state == "unavailable"
+    assert hass.states.get("sensor.my_existing_prices_current_price_vat").state not in (
+        "unknown",
+        "unavailable",
+    )
+    assert production_library.update_production.call_count == requests

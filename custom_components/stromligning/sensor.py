@@ -263,8 +263,7 @@ SENSORS = [
     StromligningSensorEntityDescription(
         key="production_price_vat",
         entity_category=None,
-        state_class=SensorStateClass.TOTAL,
-        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
         value_fn=lambda stromligning: stromligning.get_production(True),
         suggested_display_precision=2,
@@ -275,8 +274,7 @@ SENSORS = [
     StromligningSensorEntityDescription(
         key="production_price_ex_vat",
         entity_category=None,
-        state_class=SensorStateClass.TOTAL,
-        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
         value_fn=lambda stromligning: stromligning.get_production(False),
         suggested_display_precision=2,
@@ -499,6 +497,13 @@ class StromligningSensor(StromligningEntity, SensorEntity):
 
     _attr_has_entity_name = True
     _attr_available = True
+
+    @property
+    def available(self) -> bool:
+        """Require a current sale price for production sensors."""
+        if self.entity_description.key.startswith("production_"):
+            return self.native_value is not None
+        return super().available
 
     def __init__(
         self,

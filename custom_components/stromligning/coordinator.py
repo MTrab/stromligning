@@ -137,6 +137,14 @@ class StromligningCoordinator(DataUpdateCoordinator[StromligningAPI]):
             if forecast <= utc_now:
                 forecast += timedelta(hours=6)
             deadlines.append(forecast)
+        midnight = dt_utils.as_utc(
+            (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        )
+        if self.api.production_enabled:
+            if self.api.production_retry_at is not None:
+                deadlines.append(self.api.production_retry_at)
+            elif not self.api.has_production_price_at(midnight):
+                deadlines.append(midnight + timedelta(seconds=1))
         if not self.api.tomorrow_available:
             boundary = utc_now.replace(second=1, microsecond=0)
             step = self.api.period_length
@@ -148,13 +156,7 @@ class StromligningCoordinator(DataUpdateCoordinator[StromligningAPI]):
             if dt_utils.as_local(boundary).hour >= 14:
                 deadlines.append(boundary)
             if not self.api.prices_tomorrow:
-                deadlines.append(
-                    dt_utils.as_utc(
-                        (now + timedelta(days=1)).replace(
-                            hour=0, minute=0, second=1, microsecond=0
-                        )
-                    )
-                )
+                deadlines.append(midnight + timedelta(seconds=1))
         if self._retry_at is not None:
             return self._retry_at
         return min(deadlines)
