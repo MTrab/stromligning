@@ -1,13 +1,15 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret"
+            "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret",
+            "reauth_successful": "API-nøglen blev opdateret"
         },
         "error": {
             "too_many_requests": "For mange API-forespørgsler – prøv igen om 15 minutter",
             "cannot_connect": "Kunne ikke hente gyldige priser eller produkter. Kontrollér lokationen, og prøv igen.",
             "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret",
-            "invalid_price": "Angiv en gyldig pris på nul eller derover."
+            "invalid_price": "Angiv en gyldig pris på nul eller derover.",
+            "invalid_api_key": "API-nøglen blev afvist. Tjek den, eller lad feltet stå tomt for at fortsætte uden nøgle."
         },
         "step": {
             "user": {
@@ -15,7 +17,11 @@
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)",
-                    "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?"
+                    "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?",
+                    "api_key": "API-nøgle (valgfri)"
+                },
+                "data_description": {
+                    "api_key": "Valgfri. Opret en personlig API-nøgle på stromligning.dk/bruger/api-noegler. Med en nøgle tælles grænsen for antal kald per nøgle i stedet for per IP-adresse."
                 }
             },
             "fixed_price": {
@@ -23,6 +29,13 @@
                 "description": "Angiv elprisen fra din aftale inkl. moms, uden nettariffer, afgifter og abonnement. Opdater den her, når din aftale ændres.",
                 "data": {
                     "electricity_price": "Elpris inkl. moms (kr./kWh)"
+                }
+            },
+            "reauth_confirm": {
+                "title": "Opdater API-nøglen til Strømligning",
+                "description": "API'et afviste den gemte API-nøgle. Angiv en ny nøgle, eller lad feltet stå tomt for at fortsætte uden nøgle.",
+                "data": {
+                    "api_key": "API-nøgle (valgfri)"
                 }
             }
         }
@@ -35,7 +48,8 @@
             "too_many_requests": "For mange API-forespørgsler – prøv igen om 15 minutter",
             "cannot_connect": "Kunne ikke hente gyldige priser eller produkter. Kontrollér lokationen, og prøv igen.",
             "already_configured": "Denne kombination af produkt, prisopløsning og prognoser er allerede konfigureret",
-            "invalid_price": "Angiv en gyldig pris på nul eller derover."
+            "invalid_price": "Angiv en gyldig pris på nul eller derover.",
+            "invalid_api_key": "API-nøglen blev afvist. Tjek den, eller lad feltet stå tomt for at fortsætte uden nøgle."
         },
         "step": {
             "init": {
@@ -43,7 +57,11 @@
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)",
-                    "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?"
+                    "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?",
+                    "api_key": "API-nøgle (valgfri)"
+                },
+                "data_description": {
+                    "api_key": "Valgfri. Opret en personlig API-nøgle på stromligning.dk/bruger/api-noegler. Med en nøgle tælles grænsen for antal kald per nøgle i stedet for per IP-adresse."
                 }
             },
             "fixed_price": {
@@ -376,6 +394,9 @@
     "exceptions": {
         "fixed_price_required": {
             "message": "Angiv din aftalte faste elpris i integrationens indstillinger."
+        },
+        "invalid_api_key": {
+            "message": "Strømlignings API afviste API-nøglen."
         }
     }
 }

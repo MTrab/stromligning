@@ -1266,3 +1266,277 @@ async def test_cached_production_expires_at_period_boundary(
         "unavailable",
     )
     assert production_library.update_production.call_count == requests
+
+
+@pytest.fixture
+def keyed_library(library, monkeypatch):
+    """Reject the key "bad" during lookups and price updates, like HTTP 401."""
+    from pystromligning.exceptions import InvalidAPIKey
+
+    location, update = Stromligning.set_location, Stromligning.update
+
+    def check(client):
+        if client._headers().get("Authorization") == "Bearer bad":
+            raise InvalidAPIKey("rejected")
+
+    def keyed_location(client, latitude, longitude):
+        check(client)
+        location(client, latitude, longitude)
+
+    def keyed_update(client, start):
+        check(client)
+        update(client, start)
+
+    monkeypatch.setattr(Stromligning, "set_location", keyed_location)
+    monkeypatch.setattr(Stromligning, "update", keyed_update)
+    return library
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("key,expected", [(None, None), (" good ", "Bearer good")])
+async def test_setup_sends_user_agent_and_optional_key(
+    integration_hass, keyed_library, key, expected
+):
+    """Requests identify the integration and HA, and carry a saved key."""
+    from homeassistant.const import __version__ as ha_version
+    from pystromligning import LIBRARY_USER_AGENT
+
+    options = {} if key is None else {"api_key": key.strip()}
+    entry = await add_entry(integration_hass, legacy_entry(**options))
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    headers = entry.runtime_data.api._data._headers()
+    assert headers["User-Agent"] == (
+        f"HomeAssistant-Stromligning/1.2.0 HomeAssistant/{ha_version} "
+        f"{LIBRARY_USER_AGENT}"
+    )
+    assert headers.get("Authorization") == expected
+
+
+@pytest.mark.asyncio
+async def test_config_flow_api_key(integration_hass, keyed_library):
+    """A rejected key keeps the form; a valid key is saved without whitespace."""
+    hass = integration_hass
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "user"}
+    )
+    fields = {str(key): key for key in result["data_schema"].schema}
+    assert "api_key" in fields
+    options = {"company": "product", "aggregation": "1h", "forecasts": False}
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**options, "api_key": "bad"}
+    )
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "invalid_api_key"}
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"api_key": " good "}
+    )
+    assert result["type"] == "form"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**options, "api_key": " good "}
+    )
+    assert result["type"] == "create_entry"
+    assert result["result"].options == {
+        **options,
+        "production_prices": False,
+        "api_key": "good",
+    }
+    await hass.async_block_till_done()
+
+
+@pytest.mark.asyncio
+async def test_options_clear_api_key(integration_hass, keyed_library):
+    """Leaving the key empty in the options removes the saved key."""
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry(api_key="good"))
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {"company": "product", "aggregation": "1h", "forecasts": False},
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    assert "api_key" not in entry.options
+    assert "Authorization" not in entry.runtime_data.api._data._headers()
+
+
+@pytest.mark.asyncio
+async def test_rejected_key_starts_reauth(integration_hass, keyed_library):
+    """A rejected key fails setup with reauth, and a new key reloads the entry."""
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry(api_key="bad"))
+    assert entry.state is config_entries.ConfigEntryState.SETUP_ERROR
+    flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    assert [flow["context"]["source"] for flow in flows] == ["reauth"]
+    flow_id = flows[0]["flow_id"]
+    result = await hass.config_entries.flow.async_configure(flow_id, {"api_key": "bad"})
+    assert result["errors"] == {"base": "invalid_api_key"}
+    result = await hass.config_entries.flow.async_configure(
+        flow_id, {"api_key": "good"}
+    )
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    await hass.async_block_till_done()
+    assert entry.options["api_key"] == "good"
+    assert entry.options["company"] == "product"
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+
+
+@pytest.fixture
+def price_key_library(library, monkeypatch):
+    """Allow discovery but reject a bad key when current prices are requested."""
+    from pystromligning.exceptions import InvalidAPIKey
+
+    original_update = Stromligning.update
+
+    def update(client, start):
+        library.price_options = (
+            client.company["id"],
+            client.aggregation,
+            client.forecast,
+            client.electricity_price,
+        )
+        if client._headers().get("Authorization") == "Bearer bad":
+            library.rejected_prices()
+            raise InvalidAPIKey("rejected")
+        original_update(client, start)
+
+    monkeypatch.setattr(Stromligning, "update", update)
+    return library
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("company", ["product", "fixed"])
+@pytest.mark.parametrize("replacement", ["good", "", None])
+async def test_reauth_validates_prices_before_saving(
+    integration_hass, fixed_library, price_key_library, company, replacement
+):
+    """A prices-only rejection keeps saved options until a usable key is tested."""
+    hass = integration_hass
+    entry = await add_entry(
+        hass, legacy_entry(company, api_key="bad", electricity_price=1.25)
+    )
+    original_options = dict(entry.options)
+    flow = hass.config_entries.flow.async_progress_by_handler(DOMAIN)[0]
+    price_key_library.rejected_prices.reset_mock()
+    location_calls = price_key_library.location.call_count
+    result = await hass.config_entries.flow.async_configure(
+        flow["flow_id"], {"api_key": "bad"}
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == "reauth_confirm"
+    assert result["errors"] == {"base": "invalid_api_key"}
+    assert dict(entry.options) == original_options
+    assert entry.state is config_entries.ConfigEntryState.SETUP_ERROR
+    assert price_key_library.location.call_count == location_calls + 1
+    price_key_library.rejected_prices.assert_called_once()
+    assert price_key_library.price_options == (
+        company,
+        "1h",
+        False,
+        1 if company == "fixed" else None,
+    )
+    result = await hass.config_entries.flow.async_configure(
+        flow["flow_id"], {} if replacement is None else {"api_key": replacement}
+    )
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    await hass.async_block_till_done()
+    expected = dict(original_options)
+    expected.pop("api_key")
+    if replacement:
+        expected["api_key"] = replacement
+    assert dict(entry.options) == expected
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("source", ["user", "options"])
+@pytest.mark.parametrize("replacement", ["good", ""])
+async def test_fixed_price_rejected_key_returns_to_settings(
+    integration_hass, fixed_library, price_key_library, source, replacement
+):
+    """Both fixed-price flows let users replace or remove a rejected key."""
+    hass = integration_hass
+    options = {
+        "company": "fixed",
+        "aggregation": "1h",
+        "forecasts": False,
+        "api_key": "bad",
+    }
+    entry = None
+    if source == "options":
+        entry = await add_entry(hass, legacy_entry(api_key="old"))
+        original_options = dict(entry.options)
+        manager = hass.config_entries.options
+        result = await manager.async_init(entry.entry_id, data=options)
+    else:
+        manager = hass.config_entries.flow
+        result = await manager.async_init(
+            DOMAIN, context={"source": "user"}, data=options
+        )
+    assert result["step_id"] == "fixed_price"
+    result = await manager.async_configure(
+        result["flow_id"], {"electricity_price": 1.25}
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == ("init" if source == "options" else "user")
+    assert result["errors"] == {"base": "invalid_api_key"}
+    assert "api_key" in {str(key) for key in result["data_schema"].schema}
+    if entry:
+        assert dict(entry.options) == original_options
+    else:
+        assert not hass.config_entries.async_entries(DOMAIN)
+    result = await manager.async_configure(
+        result["flow_id"], {**options, "api_key": replacement}
+    )
+    assert result["step_id"] == "fixed_price"
+    result = await manager.async_configure(
+        result["flow_id"], {"electricity_price": 1.25}
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    if entry is None:
+        entry = result["result"]
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    assert entry.options.get("api_key") == (replacement or None)
+    assert entry.options["company"] == "fixed"
+    assert entry.options["electricity_price"] == 1.25
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("replacement", ["good", ""])
+async def test_production_rejected_key_requires_reauth(
+    integration_hass, production_library, monkeypatch, replacement
+):
+    """A production-only 401 validates the replacement key before reloading."""
+    from pystromligning.exceptions import InvalidAPIKey
+
+    original_update = Stromligning.update_production
+
+    def update(client, start):
+        if client._headers().get("Authorization") == "Bearer bad":
+            raise InvalidAPIKey("rejected")
+        original_update(client, start)
+
+    monkeypatch.setattr(Stromligning, "update_production", update)
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry(production_prices=True, api_key="bad"))
+    assert entry.state is config_entries.ConfigEntryState.SETUP_ERROR
+    flow = hass.config_entries.flow.async_progress_by_handler(DOMAIN)[0]
+    result = await hass.config_entries.flow.async_configure(
+        flow["flow_id"], {"api_key": "bad"}
+    )
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "invalid_api_key"}
+    assert entry.options["api_key"] == "bad"
+    result = await hass.config_entries.flow.async_configure(
+        flow["flow_id"], {"api_key": replacement}
+    )
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    await hass.async_block_till_done()
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    assert entry.options.get("api_key") == (replacement or None)
+    assert hass.states.get(
+        "sensor.my_existing_prices_production_price_vat"
+    ).state not in ("unknown", "unavailable")

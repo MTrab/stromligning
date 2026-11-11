@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryError
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import (
     async_track_point_in_utc_time,
@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_utils
 from pystromligning.exceptions import (
     FixedPriceRequired,
+    InvalidAPIKey,
     InvalidAPIResponse,
     TooManyRequests,
 )
@@ -75,6 +76,11 @@ class StromligningCoordinator(DataUpdateCoordinator[StromligningAPI]):
                 raise ConfigEntryError(
                     translation_domain=DOMAIN,
                     translation_key="fixed_price_required",
+                ) from err
+            except InvalidAPIKey as err:
+                raise ConfigEntryAuthFailed(
+                    translation_domain=DOMAIN,
+                    translation_key="invalid_api_key",
                 ) from err
             except TooManyRequests as err:
                 self._retry_at = dt_utils.utcnow() + timedelta(minutes=15)

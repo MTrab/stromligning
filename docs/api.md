@@ -30,3 +30,9 @@ When sale prices for surplus production are enabled, the integration also calls
 forecast setting. Each price is the spot price excluding VAT less Energinet's and
 the grid supplier's production tariffs; `value` excludes and `total` includes VAT
 on those deductions.
+
+Every request sends `User-Agent: HomeAssistant-Stromligning/<integration version>
+HomeAssistant/<Home Assistant version> pystromligning/<library version>`. An
+optional API key is sent as `Authorization: Bearer <key>`. HTTP 401 means the key
+is invalid, deactivated or expired; the integration then starts Home Assistant's
+reauthentication flow.
