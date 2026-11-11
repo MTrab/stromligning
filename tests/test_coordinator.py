@@ -9,6 +9,7 @@ import pytest_asyncio
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.util import dt as dt_utils
 from pystromligning.exceptions import TooManyRequests
 
 from custom_components.stromligning.api import StromligningAPI
@@ -119,6 +120,25 @@ async def test_fetch_and_rollover_are_serialized(runtime):
 
 
 @pytest.mark.asyncio
+async def test_missing_sale_prices_schedule_midnight_refresh(runtime, monkeypatch):
+    """Refresh at midnight if only consumption prices are available for tomorrow."""
+    _, coordinator, api = runtime
+    now = datetime(2026, 2, 24, 18, tzinfo=UTC)
+    monkeypatch.setattr(
+        "custom_components.stromligning.coordinator.dt_utils.now", lambda: now
+    )
+    api._entry.options["production_prices"] = True
+    api.tomorrow_available = True
+    midnight = datetime(2026, 2, 25, tzinfo=UTC)
+    assert coordinator._next_deadline() == midnight + timedelta(seconds=1)
+
+    api._production_snapshot = [{"date": midnight}]
+    assert coordinator._next_deadline() == midnight + timedelta(
+        hours=13, minutes=12, seconds=34
+    )
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("aggregation,minute", [("1h", 0), ("15m", 45)])
 async def test_retry_deadline_matches_display(
     runtime, monkeypatch, aggregation, minute
@@ -141,3 +161,24 @@ async def test_retry_deadline_matches_display(
     assert deadline.day == (25 if aggregation == "1h" else 24)
     coordinator._retry_at = now + timedelta(minutes=15)
     assert coordinator._next_deadline() >= coordinator._retry_at
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("day", [(2, 24), (3, 29), (10, 25)])
+@pytest.mark.parametrize("aggregation", ["1h", "15m"])
+async def test_production_midnight_uses_home_timezone(
+    runtime, monkeypatch, day, aggregation
+):
+    """Missing sale prices trigger a local midnight fetch, including DST days."""
+    from zoneinfo import ZoneInfo
+
+    _, coordinator, api = runtime
+    zone = ZoneInfo("Europe/Copenhagen")
+    now = datetime(2026, *day, 18, tzinfo=zone)
+    monkeypatch.setattr(dt_utils, "DEFAULT_TIME_ZONE", zone)
+    monkeypatch.setattr(dt_utils, "now", lambda: now)
+    api._entry.options.update(production_prices=True, aggregation=aggregation)
+    api.tomorrow_available = True
+    midnight = (now + timedelta(days=1)).replace(hour=0)
+    expected = midnight.astimezone(UTC) + timedelta(seconds=1)
+    assert coordinator._next_deadline() == expected

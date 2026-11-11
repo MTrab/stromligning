@@ -40,6 +40,7 @@ def test_forecast_prices(sensor_key, expected, aggregation, day, monkeypatch):
     sensor.api = SimpleNamespace(
         prices_forecasts=prices,
         prices_today=[],
+        production_today=[],
         get_aggregation=lambda: aggregation,
     )
 
@@ -62,3 +63,14 @@ def test_forecast_prices(sensor_key, expected, aggregation, day, monkeypatch):
     sensor.api.prices_forecasts = []
     sensor.handle_attributes()
     assert sensor.extra_state_attributes == {"prices": []}
+
+
+@pytest.mark.parametrize("key", ["production_price_vat", "production_price_ex_vat"])
+def test_production_sensor_rate_metadata(key):
+    """Sale rates use measurement statistics and a price-per-energy unit."""
+    from homeassistant.components.sensor import SensorStateClass
+
+    description = next(description for description in SENSORS if description.key == key)
+    assert description.state_class is SensorStateClass.MEASUREMENT
+    assert description.device_class is None
+    assert description.unit_of_measurement == "kr/kWh"

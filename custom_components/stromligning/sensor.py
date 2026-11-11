@@ -23,7 +23,7 @@ from .base import (
     StromligningSensorEntityDescription,
     build_price_attributes,
 )
-from .const import ATTR_PRICES, CONF_FORECASTS, DOMAIN
+from .const import ATTR_PRICES, CONF_FORECASTS, CONF_PRODUCTION_PRICES, DOMAIN
 
 LOGGER = logging.getLogger(__name__)
 
@@ -261,6 +261,28 @@ SENSORS = [
         unit_of_measurement="kr/kWh",  # type: ignore
     ),
     StromligningSensorEntityDescription(
+        key="production_price_vat",
+        entity_category=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:solar-power",
+        value_fn=lambda stromligning: stromligning.get_production(True),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=True,
+        translation_key="production_price_vat",
+        unit_of_measurement="kr/kWh",  # type: ignore
+    ),
+    StromligningSensorEntityDescription(
+        key="production_price_ex_vat",
+        entity_category=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:solar-power",
+        value_fn=lambda stromligning: stromligning.get_production(False),
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        translation_key="production_price_ex_vat",
+        unit_of_measurement="kr/kWh",  # type: ignore
+    ),
+    StromligningSensorEntityDescription(
         key="next_data_refresh",
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=None,
@@ -450,9 +472,12 @@ async def async_setup_entry(hass, entry: StromligningConfigEntry, async_add_devi
     sensors = []
 
     forecasts = entry.options.get(CONF_FORECASTS, False)
+    production = entry.options.get(CONF_PRODUCTION_PRICES, False)
 
     for description in SENSORS:
         if "forecast" in description.key and not forecasts:
+            continue
+        if description.key.startswith("production_") and not production:
             continue
 
         entity = StromligningSensor(description, hass, entry)
@@ -472,6 +497,13 @@ class StromligningSensor(StromligningEntity, SensorEntity):
 
     _attr_has_entity_name = True
     _attr_available = True
+
+    @property
+    def available(self) -> bool:
+        """Require a current sale price for production sensors."""
+        if self.entity_description.key.startswith("production_"):
+            return self.native_value is not None
+        return super().available
 
     def __init__(
         self,
@@ -547,6 +579,14 @@ class StromligningSensor(StromligningEntity, SensorEntity):
             "forecasts_spotprice_ex_vat": (
                 self.api.prices_forecasts,
                 lambda price: price["details"]["electricity"]["value"],
+            ),
+            "production_price_vat": (
+                self.api.production_today,
+                lambda price: price["price"]["total"],
+            ),
+            "production_price_ex_vat": (
+                self.api.production_today,
+                lambda price: price["price"]["value"],
             ),
             "spotprice_vat": (
                 self.api.prices_today,
