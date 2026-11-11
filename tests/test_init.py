@@ -10,7 +10,7 @@ import pytest
 import pytest_asyncio
 from homeassistant import config_entries, loader
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er, frame
 from homeassistant.util import dt as dt_utils
 from pystromligning import Stromligning
 from pystromligning.exceptions import InvalidAPIResponse, TooManyRequests
@@ -29,6 +29,7 @@ async def integration_hass(tmp_path):
     )
     hass = HomeAssistant(str(tmp_path))
     loader.async_setup(hass)
+    frame.async_setup(hass)
     hass.config.latitude = 55.6761
     hass.config.longitude = 12.5683
     await hass.config.async_set_time_zone("Europe/Copenhagen")
@@ -283,7 +284,7 @@ async def test_upgrade_preserves_registered_identity_and_reload(
     assert entry.options["name"] == "My existing prices"
     state = hass.states.get(registered.entity_id)
     assert state is not None and state.state not in ("unknown", "unavailable")
-    assert state.attributes["friendly_name"] == "User renamed price"
+    assert registry.async_get(registered.entity_id).name == "User renamed price"
     assert set(state.attributes["prices"][0]) == {"price", "start", "end"}
     original_ids = set(registry.entities)
     for _ in range(2):
@@ -296,6 +297,7 @@ async def test_upgrade_preserves_registered_identity_and_reload(
         assert coordinator._local_unsub is None
         assert set(registry.entities) == original_ids
         assert registry.async_get(registered.entity_id).device_id == device.id
+        assert registry.async_get(registered.entity_id).name == "User renamed price"
         assert (
             registry.async_get(disabled.entity_id).disabled_by
             is er.RegistryEntryDisabler.USER
