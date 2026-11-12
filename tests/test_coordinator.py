@@ -206,8 +206,8 @@ async def test_missing_tomorrow_fetch_retries_until_available(
     """A missed daily fetch arms retries; success returns to the daily schedule."""
     _, coordinator, api = runtime
     zone = ZoneInfo("Europe/Copenhagen")
-    now = datetime(2026, 11, 11, 13, 0, second, tzinfo=zone)
-    api.next_update = f"13:0:{second}"
+    now = datetime(2026, 11, 11, 13, 5, second, tzinfo=zone)
+    api.next_update = f"13:5:{second}"
     monkeypatch.setattr(dt_utils, "DEFAULT_TIME_ZONE", zone)
     monkeypatch.setattr(dt_utils, "now", lambda: now)
     track = Mock(return_value=Mock())
@@ -235,7 +235,7 @@ async def test_missing_tomorrow_fetch_retries_until_available(
     api.update_prices.side_effect = publish_prices
     now = next_retry
     await track.call_args.args[1](now)
-    expected = now.replace(minute=0) + timedelta(days=1)
+    expected = now.replace(minute=5) + timedelta(days=1)
     assert api.get_next_update() == expected.astimezone(UTC)
     assert track.call_args.args[2] == api.get_next_update()
     assert api.update_prices.await_count == 3

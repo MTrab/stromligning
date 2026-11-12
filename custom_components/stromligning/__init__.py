@@ -42,7 +42,7 @@ async def async_setup_entry(
     api = StromligningAPI(
         hass,
         entry,
-        0,
+        5,
         randint(0, 59),
         create_client(hass, entry.options),
     )
