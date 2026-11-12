@@ -655,7 +655,7 @@ async def test_public_tomorrow_and_forecast_attributes(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("aggregation", ["1h", "15m"])
-async def test_refresh_entity_tracks_hourly_missing_price_retries(
+async def test_refresh_entity_tracks_missing_price_retries(
     integration_hass, library, monkeypatch, aggregation
 ):
     """The refresh sensor and availability attribute follow the actual timer."""
@@ -664,9 +664,7 @@ async def test_refresh_entity_tracks_hourly_missing_price_retries(
 
     now = datetime(2026, 11, 11, 12, tzinfo=ZoneInfo("Europe/Copenhagen"))
     monkeypatch.setattr(dt_utils, "now", lambda: now)
-    monkeypatch.setattr(
-        "custom_components.stromligning.randint", Mock(side_effect=[7, 34])
-    )
+    monkeypatch.setattr("custom_components.stromligning.randint", Mock(return_value=34))
     track = Mock(return_value=Mock())
     monkeypatch.setattr(
         "custom_components.stromligning.coordinator.async_track_point_in_utc_time",
@@ -697,22 +695,34 @@ async def test_refresh_entity_tracks_hourly_missing_price_retries(
         assert binary.attributes["available_at"] == expected.strftime("%H:%M:%S")
         assert track.call_args.args[2] == dt_utils.as_utc(expected)
 
-    check_deadline(now.replace(hour=13, minute=7, second=34))
-    for hour in (13, 14):
-        now = now.replace(hour=hour, minute=7, second=34)
+    check_deadline(now.replace(hour=13, minute=5, second=34))
+    for minute in (5, 7):
+        now = now.replace(hour=13, minute=minute, second=34)
         await coordinator._fetch(now)
         await hass.async_block_till_done()
-        check_deadline(now + timedelta(hours=1))
+        check_deadline(now + timedelta(minutes=2))
 
-    now = now.replace(hour=15)
+    now = now.replace(minute=9)
     publish_tomorrow = True
     await coordinator._fetch(now)
     await hass.async_block_till_done()
-    check_deadline((now + timedelta(days=1)).replace(hour=13))
+    check_deadline((now + timedelta(days=1)).replace(minute=5))
     assert (
         hass.states.get("binary_sensor.my_existing_prices_tomorrow_available_vat").state
         == "on"
     )
+
+
+@pytest.mark.asyncio
+async def test_daily_fetch_is_spread_over_seconds_only(
+    integration_hass, library, monkeypatch
+):
+    """The daily fetch starts at 13:05 with only a random second."""
+    random_second = Mock(return_value=34)
+    monkeypatch.setattr("custom_components.stromligning.randint", random_second)
+    entry = await add_entry(integration_hass, legacy_entry())
+    random_second.assert_called_once_with(0, 59)
+    assert entry.runtime_data.api.next_update == "13:5:34"
 
 
 @pytest.fixture

@@ -30,6 +30,11 @@ LOGGER = logging.getLogger(__name__)
 type StromligningConfigEntry = ConfigEntry[StromligningCoordinator]
 
 
+# Minutes between retries for missing prices, and how long after the daily
+# fetch each step is used: every 2 minutes, then every 5, then every 15.
+RETRY_STEPS = ((2, 6), (5, 60), (15, None))
+
+
 class StromligningCoordinator(DataUpdateCoordinator[StromligningAPI]):
     """Own the client, fetch status, and all scheduling for one entry."""
 
@@ -155,8 +160,12 @@ class StromligningCoordinator(DataUpdateCoordinator[StromligningAPI]):
         if not self.api.tomorrow_available:
             retry = daily_utc
             if retry <= utc_now:
-                interval = timedelta(hours=1)
-                retry += ((utc_now - retry) // interval + 1) * interval
+                elapsed = utc_now - daily_utc
+                for minutes, limit in RETRY_STEPS:
+                    interval = timedelta(minutes=minutes)
+                    retry = daily_utc + (elapsed // interval + 1) * interval
+                    if limit is None or retry - daily_utc <= timedelta(minutes=limit):
+                        break
             deadlines.append(retry)
             if not self.api.prices_tomorrow:
                 deadlines.append(midnight + timedelta(seconds=1))
