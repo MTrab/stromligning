@@ -653,6 +653,68 @@ async def test_public_tomorrow_and_forecast_attributes(
     )
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("aggregation", ["1h", "15m"])
+async def test_refresh_entity_tracks_hourly_missing_price_retries(
+    integration_hass, library, monkeypatch, aggregation
+):
+    """The refresh sensor and availability attribute follow the actual timer."""
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    now = datetime(2026, 11, 11, 12, tzinfo=ZoneInfo("Europe/Copenhagen"))
+    monkeypatch.setattr(dt_utils, "now", lambda: now)
+    monkeypatch.setattr(
+        "custom_components.stromligning.randint", Mock(side_effect=[7, 34])
+    )
+    track = Mock(return_value=Mock())
+    monkeypatch.setattr(
+        "custom_components.stromligning.coordinator.async_track_point_in_utc_time",
+        track,
+    )
+    publish_tomorrow = False
+    original_update = Stromligning.update
+
+    def update(client, start):
+        original_update(client, start)
+        if publish_tomorrow:
+            midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            client.prices.extend(
+                day_records(midnight + timedelta(days=1), client.aggregation)
+            )
+
+    monkeypatch.setattr(Stromligning, "update", update)
+    hass = integration_hass
+    entry = await add_entry(hass, legacy_entry(aggregation=aggregation))
+    coordinator = entry.runtime_data
+
+    def check_deadline(expected):
+        refresh = hass.states.get("sensor.my_existing_prices_next_data_refresh")
+        binary = hass.states.get(
+            "binary_sensor.my_existing_prices_tomorrow_available_vat"
+        )
+        assert dt_utils.parse_datetime(refresh.state) == expected
+        assert binary.attributes["available_at"] == expected.strftime("%H:%M:%S")
+        assert track.call_args.args[2] == dt_utils.as_utc(expected)
+
+    check_deadline(now.replace(hour=13, minute=7, second=34))
+    for hour in (13, 14):
+        now = now.replace(hour=hour, minute=7, second=34)
+        await coordinator._fetch(now)
+        await hass.async_block_till_done()
+        check_deadline(now + timedelta(hours=1))
+
+    now = now.replace(hour=15)
+    publish_tomorrow = True
+    await coordinator._fetch(now)
+    await hass.async_block_till_done()
+    check_deadline((now + timedelta(days=1)).replace(hour=13))
+    assert (
+        hass.states.get("binary_sensor.my_existing_prices_tomorrow_available_vat").state
+        == "on"
+    )
+
+
 @pytest.fixture
 def fixed_library(library, monkeypatch):
     """Add fixed products without relying on display names or catalogue prices."""
@@ -1307,8 +1369,9 @@ async def test_setup_sends_user_agent_and_optional_key(
     entry = await add_entry(integration_hass, legacy_entry(**options))
     assert entry.state is config_entries.ConfigEntryState.LOADED
     headers = entry.runtime_data.api._data._headers()
+    version = loader.async_get_loaded_integration(integration_hass, DOMAIN).version
     assert headers["User-Agent"] == (
-        f"HomeAssistant-Stromligning/1.2.0 HomeAssistant/{ha_version} "
+        f"HomeAssistant-Stromligning/{version} HomeAssistant/{ha_version} "
         f"{LIBRARY_USER_AGENT}"
     )
     assert headers.get("Authorization") == expected
