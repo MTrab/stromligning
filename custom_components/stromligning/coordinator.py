@@ -133,6 +133,7 @@ class StromligningCoordinator(DataUpdateCoordinator[StromligningAPI]):
         utc_now = dt_utils.as_utc(now)
         hour, minute, second = map(int, self.api.next_update.split(":"))
         daily = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
+        daily_utc = dt_utils.as_utc(daily)
         if daily <= now:
             daily += timedelta(days=1)
         deadlines = [dt_utils.as_utc(daily)]
@@ -152,15 +153,11 @@ class StromligningCoordinator(DataUpdateCoordinator[StromligningAPI]):
             elif not self.api.has_production_price_at(midnight):
                 deadlines.append(midnight + timedelta(seconds=1))
         if not self.api.tomorrow_available:
-            boundary = utc_now.replace(second=1, microsecond=0)
-            step = self.api.period_length
-            boundary = boundary.replace(
-                minute=(boundary.minute // (step.seconds // 60)) * (step.seconds // 60)
-            )
-            if boundary <= utc_now:
-                boundary += step
-            if dt_utils.as_local(boundary).hour >= 14:
-                deadlines.append(boundary)
+            retry = daily_utc
+            if retry <= utc_now:
+                interval = timedelta(minutes=2)
+                retry += ((utc_now - retry) // interval + 1) * interval
+            deadlines.append(retry)
             if not self.api.prices_tomorrow:
                 deadlines.append(midnight + timedelta(seconds=1))
         if self._retry_at is not None:

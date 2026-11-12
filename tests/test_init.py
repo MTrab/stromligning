@@ -653,6 +653,18 @@ async def test_public_tomorrow_and_forecast_attributes(
     )
 
 
+@pytest.mark.asyncio
+async def test_daily_fetch_is_spread_over_seconds_only(
+    integration_hass, library, monkeypatch
+):
+    """The daily fetch starts at 13:00 with only a random second."""
+    random_second = Mock(return_value=34)
+    monkeypatch.setattr("custom_components.stromligning.randint", random_second)
+    entry = await add_entry(integration_hass, legacy_entry())
+    random_second.assert_called_once_with(0, 59)
+    assert entry.runtime_data.api.next_update == "13:0:34"
+
+
 @pytest.fixture
 def fixed_library(library, monkeypatch):
     """Add fixed products without relying on display names or catalogue prices."""
