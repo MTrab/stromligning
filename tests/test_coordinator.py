@@ -147,7 +147,7 @@ async def test_retry_deadline_matches_display(
 ):
     """The displayed deadline matches the retries and the midnight fallback."""
     hass, coordinator, api = runtime
-    now = datetime(2026, 2, 24, 23, 59, 2, tzinfo=UTC)
+    now = datetime(2026, 2, 24, 23, 58, 2, tzinfo=UTC)
     monkeypatch.setattr(
         "custom_components.stromligning.coordinator.dt_utils.now", lambda: now
     )
@@ -161,7 +161,9 @@ async def test_retry_deadline_matches_display(
     coordinator.start()
     deadline = api.get_next_update()
     expected = datetime(2026, 2, 25, tzinfo=UTC)
-    expected += timedelta(seconds=34 if partial_prices else 1)
+    expected += (
+        timedelta(minutes=12, seconds=34) if partial_prices else timedelta(seconds=1)
+    )
     assert deadline == expected
     coordinator._retry_at = now + timedelta(minutes=15)
     assert coordinator._next_deadline() >= coordinator._retry_at
@@ -176,15 +178,18 @@ async def test_retry_deadline_matches_display(
         ((0, 0, 1), (13, 12, 34)),
         ((12, 30, 0), (13, 12, 34)),
         ((13, 12, 34), (13, 14, 34)),
-        ((13, 14, 33), (13, 14, 34)),
-        ((13, 59, 59), (14, 0, 34)),
-        ((22, 1, 0), (22, 2, 34)),
+        ((13, 16, 34), (13, 18, 34)),
+        ((13, 18, 34), (13, 22, 34)),
+        ((13, 59, 59), (14, 2, 34)),
+        ((14, 7, 34), (14, 12, 34)),
+        ((14, 12, 34), (14, 27, 34)),
+        ((22, 1, 0), (22, 12, 34)),
     ],
 )
 async def test_missing_tomorrow_retry_uses_local_time(
     runtime, monkeypatch, day, aggregation, clock, expected
 ):
-    """Retries follow the daily fetch every two minutes, including on DST days."""
+    """Retries slow from 2 to 5 to 15 minutes and keep the second, also on DST days."""
     _, coordinator, api = runtime
     zone = ZoneInfo("Europe/Copenhagen")
     now = datetime(2026, *day, *clock, tzinfo=zone)
@@ -199,15 +204,15 @@ async def test_missing_tomorrow_retry_uses_local_time(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("aggregation", ["1h", "15m"])
-@pytest.mark.parametrize("second", [0, 34, 59])
+@pytest.mark.parametrize("minute,second", [(5, 0), (7, 34), (32, 18), (40, 59)])
 async def test_missing_tomorrow_fetch_retries_until_available(
-    runtime, monkeypatch, aggregation, second
+    runtime, monkeypatch, aggregation, minute, second
 ):
     """A missed daily fetch arms retries; success returns to the daily schedule."""
     _, coordinator, api = runtime
     zone = ZoneInfo("Europe/Copenhagen")
-    now = datetime(2026, 11, 11, 13, 5, second, tzinfo=zone)
-    api.next_update = f"13:5:{second}"
+    now = datetime(2026, 11, 11, 13, minute, second, tzinfo=zone)
+    api.next_update = f"13:{minute}:{second}"
     monkeypatch.setattr(dt_utils, "DEFAULT_TIME_ZONE", zone)
     monkeypatch.setattr(dt_utils, "now", lambda: now)
     track = Mock(return_value=Mock())
@@ -235,7 +240,7 @@ async def test_missing_tomorrow_fetch_retries_until_available(
     api.update_prices.side_effect = publish_prices
     now = next_retry
     await track.call_args.args[1](now)
-    expected = now.replace(minute=5) + timedelta(days=1)
+    expected = now.replace(minute=minute) + timedelta(days=1)
     assert api.get_next_update() == expected.astimezone(UTC)
     assert track.call_args.args[2] == api.get_next_update()
     assert api.update_prices.await_count == 3
