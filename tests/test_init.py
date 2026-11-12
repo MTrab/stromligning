@@ -1319,8 +1319,9 @@ async def test_setup_sends_user_agent_and_optional_key(
     entry = await add_entry(integration_hass, legacy_entry(**options))
     assert entry.state is config_entries.ConfigEntryState.LOADED
     headers = entry.runtime_data.api._data._headers()
+    version = loader.async_get_loaded_integration(integration_hass, DOMAIN).version
     assert headers["User-Agent"] == (
-        f"HomeAssistant-Stromligning/1.2.0 HomeAssistant/{ha_version} "
+        f"HomeAssistant-Stromligning/{version} HomeAssistant/{ha_version} "
         f"{LIBRARY_USER_AGENT}"
     )
     assert headers.get("Authorization") == expected
