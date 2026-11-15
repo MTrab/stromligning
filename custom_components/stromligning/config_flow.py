@@ -172,7 +172,7 @@ class FixedPriceFlow:
         if user_input is not None:
             try:
                 price = electricity_price(user_input[CONF_ELECTRICITY_PRICE])
-            except vol.Invalid, KeyError:
+            except (vol.Invalid, KeyError):
                 errors[CONF_ELECTRICITY_PRICE] = "invalid_price"
             else:
                 self._price_options[CONF_ELECTRICITY_PRICE] = price
