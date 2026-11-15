@@ -168,7 +168,7 @@ class StromligningAPI:
             raise
         except TooManyRequests:
             self.production_retry_at = dt_utils.utcnow() + timedelta(minutes=15)
-        except InvalidAPIResponse, RequestException, TimeoutError:
+        except (InvalidAPIResponse, RequestException, TimeoutError):
             if self.production_retry_at is None:
                 LOGGER.warning("Unable to retrieve valid electricity sale prices")
             self.production_retry_at = dt_utils.utcnow() + self.period_length
