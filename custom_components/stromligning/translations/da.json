@@ -18,9 +18,11 @@
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)",
                     "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?",
+                    "production_agreement": "Produktionsaftale (valgfri)",
                     "api_key": "API-nøgle (valgfri)"
                 },
                 "data_description": {
+                    "production_agreement": "Valgfri. Vælg den aftale, der køber din overskudsproduktion, så trækkes selskabets fradrag også fra salgspriserne. Uden en aftale er de spotprisen minus produktionstarifferne.",
                     "api_key": "Valgfri. Opret en personlig API-nøgle på stromligning.dk/bruger/api-noegler. Med en nøgle tælles grænsen for antal kald per nøgle i stedet for per IP-adresse."
                 }
             },
@@ -58,9 +60,11 @@
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)",
                     "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?",
+                    "production_agreement": "Produktionsaftale (valgfri)",
                     "api_key": "API-nøgle (valgfri)"
                 },
                 "data_description": {
+                    "production_agreement": "Valgfri. Vælg den aftale, der køber din overskudsproduktion, så trækkes selskabets fradrag også fra salgspriserne. Uden en aftale er de spotprisen minus produktionstarifferne.",
                     "api_key": "Valgfri. Opret en personlig API-nøgle på stromligning.dk/bruger/api-noegler. Med en nøgle tælles grænsen for antal kald per nøgle i stedet for per IP-adresse."
                 }
             },

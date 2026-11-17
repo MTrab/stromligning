@@ -18,7 +18,13 @@ def configuration_description(product_name: str, options: Mapping[str, Any]) -> 
 
 def device_name(hass, entry) -> str | None:
     """Preserve every registered device name, including the old default name."""
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    registry = dr.async_get(hass)
+    identifier = (DOMAIN, entry.entry_id)
+    if hasattr(registry, "async_get_device_by_identifier"):
+        device = registry.async_get_device_by_identifier(identifier, entry.entry_id)
+    else:
+        # Older Home Assistant; this lookup stops working in 2027.8.
+        device = registry.async_get_device(identifiers={identifier})
     if device is not None:
         return device.name
     return entry.data.get(CONF_NAME, CONF_DEFAULT_NAME)

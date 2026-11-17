@@ -104,6 +104,12 @@ If sale prices are temporarily unavailable, the integration retries them and
 continues updating consumption prices. The sale price sensors use cached values
 only while they cover the current period.
 
+Electricity companies usually take a deduction for buying the surplus. Choose
+your "Production agreement" in the integration options, and that company's
+deduction is taken off the sale prices as well. It is optional; without one the
+sale prices are as described above. If the chosen agreement is no longer
+offered, the sale price sensors become unavailable until another is chosen.
+
 ## Use the custom template to show the next x cheapest hours
 
 Copy the `custom_templates/FindCheapestPeriod.jinja` to the `custom_templates` directory in your config folder (if it doesn't exist then create the folder)
