@@ -26,6 +26,7 @@ from .const import (
     CONF_COMPANY,
     CONF_ELECTRICITY_PRICE,
     CONF_FORECASTS,
+    CONF_PRODUCTION_AGREEMENT,
     CONF_PRODUCTION_PRICES,
     DOMAIN,
 )
@@ -123,6 +124,9 @@ class StromligningAPI:
             self._entry.options.get(CONF_FORECASTS, False),
         )
         self._data.set_forecast(self._entry.options.get(CONF_FORECASTS, False))
+        self._data.set_production_agreement(
+            self._entry.options.get(CONF_PRODUCTION_AGREEMENT)
+        )
         set_electricity_price(self._data, self._entry.options)
 
     async def update_prices(self) -> None:
@@ -177,6 +181,11 @@ class StromligningAPI:
 
     async def _update_production(self, start: str) -> list:
         """Fetch and validate the current sale prices."""
+        if (
+            self._entry.options.get(CONF_PRODUCTION_AGREEMENT)
+            and not self._data.production_agreement
+        ):
+            raise InvalidAPIResponse("Selected production agreement is unavailable")
         try:
             await self.hass.async_add_executor_job(self._data.update_production, start)
             snapshot = self._validated_snapshot(

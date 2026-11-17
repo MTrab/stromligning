@@ -10,6 +10,7 @@ import pytest
 import pytest_asyncio
 from homeassistant import config_entries, loader
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import InvalidData
 from homeassistant.helpers import device_registry as dr, entity_registry as er, frame
 from homeassistant.util import dt as dt_utils
 from pystromligning import Stromligning
@@ -1226,6 +1227,102 @@ async def test_production_price_setup(integration_hass, production_library, enab
     assert api.get_production(False) == current["price"]["value"]
     assert len(state.attributes["prices"]) == len(api.production_today)
     assert state.attributes["prices"][0]["price"] == 0.25
+
+
+@pytest.fixture
+def agreement_library(production_library, monkeypatch):
+    """Offer two production agreements and record the one used for sale prices."""
+    location = Stromligning.set_location
+    update_production = Stromligning.update_production
+
+    def agreements(client, latitude, longitude):
+        location(client, latitude, longitude)
+        client.available_production_agreements = [
+            {"id": "sale", "name": "Provider - Sale", "productType": "production"},
+            {"id": "other", "name": "Another - Sale", "productType": "production"},
+        ]
+
+    def update(client, start):
+        production_library.agreement(client.production_agreement.get("id"))
+        update_production(client, start)
+
+    monkeypatch.setattr(Stromligning, "set_location", agreements)
+    monkeypatch.setattr(Stromligning, "update_production", update)
+    return production_library
+
+
+@pytest.mark.asyncio
+async def test_production_agreement_is_optional(integration_hass, agreement_library):
+    """The agreement can be chosen at setup, changed and removed again."""
+    hass = integration_hass
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "user"}
+    )
+    fields = {str(key): value for key, value in result["data_schema"].schema.items()}
+    assert fields["production_agreement"].container == {
+        "sale": "Provider - Sale",
+        "other": "Another - Sale",
+    }
+    options = {
+        "company": "product",
+        "aggregation": "1h",
+        "forecasts": False,
+        "production_prices": True,
+    }
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**options, "production_agreement": "sale"}
+    )
+    assert result["type"] == "create_entry"
+    entry = result["result"]
+    await hass.async_block_till_done()
+    assert entry.options["production_agreement"] == "sale"
+    assert agreement_library.agreement.call_args_list[-1].args == ("sale",)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    with pytest.raises(InvalidData):
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], {**options, "production_agreement": "unknown"}
+        )
+    assert entry.options["production_agreement"] == "sale"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], options
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    assert "production_agreement" not in entry.options
+    assert agreement_library.agreement.call_args_list[-1].args == (None,)
+
+
+@pytest.mark.asyncio
+async def test_production_agreement_is_hidden_without_agreements(
+    integration_hass, production_library
+):
+    """No field is shown where the API lists no production agreements."""
+    result = await integration_hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "user"}
+    )
+    fields = {str(key) for key in result["data_schema"].schema}
+    assert "production_prices" in fields
+    assert "production_agreement" not in fields
+
+
+@pytest.mark.asyncio
+async def test_unavailable_production_agreement_gives_no_sale_price(
+    integration_hass, agreement_library
+):
+    """A removed agreement is not replaced by sale prices without its deduction."""
+    hass = integration_hass
+    entry = await add_entry(
+        hass, legacy_entry(production_prices=True, production_agreement="removed")
+    )
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    consumption = "sensor.my_existing_prices_current_price_vat"
+    production = "sensor.my_existing_prices_production_price_vat"
+    assert hass.states.get(consumption).state not in ("unknown", "unavailable")
+    assert hass.states.get(production).state == "unavailable"
+    agreement_library.update_production.assert_not_called()
+    assert entry.runtime_data.api.production_retry_at is not None
 
 
 @pytest.mark.asyncio

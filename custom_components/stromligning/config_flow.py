@@ -31,6 +31,7 @@ from .const import (
     CONF_DEFAULT_NAME,
     CONF_ELECTRICITY_PRICE,
     CONF_FORECASTS,
+    CONF_PRODUCTION_AGREEMENT,
     CONF_PRODUCTION_PRICES,
     DOMAIN,
 )
@@ -70,7 +71,19 @@ def clean_api_key(options):
     return options
 
 
-def schema(companies, options):
+def production_agreement_field(agreements, options):
+    """Return an optional choice of who buys the surplus production."""
+    if not agreements:
+        return {}
+    return {
+        vol.Optional(
+            CONF_PRODUCTION_AGREEMENT,
+            description={"suggested_value": options.get(CONF_PRODUCTION_AGREEMENT)},
+        ): vol.In({agreement["id"]: agreement["name"] for agreement in agreements})
+    }
+
+
+def schema(companies, options, agreements=()):
     """Keep product IDs as values even when display names are identical."""
     if not companies:
         return vol.Schema(api_key_field(options))
@@ -90,6 +103,7 @@ def schema(companies, options):
                 CONF_PRODUCTION_PRICES,
                 default=options.get(CONF_PRODUCTION_PRICES, False),
             ): bool,
+            **production_agreement_field(agreements, options),
             **api_key_field(options),
         }
     )
@@ -116,6 +130,7 @@ async def validate(hass, api, options):
         raise InvalidAPIResponse("Selected product is unavailable")
     api.set_aggregation(options[CONF_AGGREGATION])
     api.set_forecast(options[CONF_FORECASTS])
+    api.set_production_agreement(options.get(CONF_PRODUCTION_AGREEMENT))
     set_electricity_price(api, options)
     await connector.update_prices()
 
@@ -182,7 +197,9 @@ class FixedPriceFlow:
                     return self.async_show_form(
                         step_id=self._settings_step_id,
                         data_schema=schema(
-                            self._price_api.available_companies, self._price_options
+                            self._price_api.available_companies,
+                            self._price_options,
+                            self._price_api.available_production_agreements,
                         ),
                         errors={"base": "invalid_api_key"},
                     )
@@ -210,11 +227,13 @@ class StromligningOptionsFlow(FixedPriceFlow, config_entries.OptionsFlowWithRelo
         """Show and save settings, retaining any legacy option keys."""
         errors = {}
         companies = []
+        agreements = []
         if user_input is not None:
             user_input = clean_api_key(user_input)
         try:
             api = await discover(self.hass, user_input or self.config_entry.options)
             companies = api.available_companies
+            agreements = api.available_production_agreements
             if user_input is not None and CONF_COMPANY in user_input:
                 if duplicate_entry(self.hass, user_input, self.config_entry.entry_id):
                     errors["base"] = "already_configured"
@@ -242,7 +261,9 @@ class StromligningOptionsFlow(FixedPriceFlow, config_entries.OptionsFlowWithRelo
             errors["base"] = "cannot_connect"
         return self.async_show_form(
             step_id="init",
-            data_schema=schema(companies, user_input or self.config_entry.options),
+            data_schema=schema(
+                companies, user_input or self.config_entry.options, agreements
+            ),
             errors=errors,
         )
 
@@ -254,14 +275,19 @@ class StromligningOptionsFlow(FixedPriceFlow, config_entries.OptionsFlowWithRelo
                 return self._show_fixed_price({"base": "already_configured"})
             return self.async_show_form(
                 step_id="init",
-                data_schema=schema(api.available_companies, options),
+                data_schema=schema(
+                    api.available_companies,
+                    options,
+                    api.available_production_agreements,
+                ),
                 errors={"base": "already_configured"},
             )
         saved = {**self.config_entry.options, **options}
         if api.company.get("productType") != "fixed":
             saved.pop(CONF_ELECTRICITY_PRICE, None)
-        if CONF_API_KEY not in options:
-            saved.pop(CONF_API_KEY, None)
+        for cleared in (CONF_API_KEY, CONF_PRODUCTION_AGREEMENT):
+            if cleared not in options:
+                saved.pop(cleared, None)
         return self.async_create_entry(title="", data=saved)
 
 
@@ -281,11 +307,13 @@ class StromligningConfigFlow(FixedPriceFlow, config_entries.ConfigFlow, domain=D
         """Resolve products, reject duplicates, and test current price retrieval."""
         errors = {}
         companies = []
+        agreements = []
         if user_input is not None:
             user_input = clean_api_key(user_input)
         try:
             api = await discover(self.hass, user_input or {})
             companies = api.available_companies
+            agreements = api.available_production_agreements
             if user_input is not None and CONF_COMPANY in user_input:
                 await self.async_set_unique_id(configuration_identity(user_input))
                 self._abort_if_unique_id_configured()
@@ -312,7 +340,7 @@ class StromligningConfigFlow(FixedPriceFlow, config_entries.ConfigFlow, domain=D
             errors["base"] = "cannot_connect"
         return self.async_show_form(
             step_id="user",
-            data_schema=schema(companies, user_input or {}),
+            data_schema=schema(companies, user_input or {}, agreements),
             errors=errors,
         )
 

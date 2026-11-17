@@ -18,9 +18,11 @@
                     "aggregation": "Resolution of prices",
                     "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
                     "production_prices": "Include sale prices for surplus production (e.g. solar)?",
+                    "production_agreement": "Production agreement (optional)",
                     "api_key": "API key (optional)"
                 },
                 "data_description": {
+                    "production_agreement": "Optional. Choose the agreement that buys your surplus production, and the sale prices are also less that company's deduction. Without one they are the spot price less the production tariffs.",
                     "api_key": "Optional. Create a personal API key at stromligning.dk/bruger/api-noegler. Requests with a key are rate limited per key instead of per IP address."
                 }
             },
@@ -58,9 +60,11 @@
                     "aggregation": "Resolution of prices",
                     "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
                     "production_prices": "Include sale prices for surplus production (e.g. solar)?",
+                    "production_agreement": "Production agreement (optional)",
                     "api_key": "API key (optional)"
                 },
                 "data_description": {
+                    "production_agreement": "Optional. Choose the agreement that buys your surplus production, and the sale prices are also less that company's deduction. Without one they are the spot price less the production tariffs.",
                     "api_key": "Optional. Create a personal API key at stromligning.dk/bruger/api-noegler. Requests with a key are rate limited per key instead of per IP address."
                 }
             },
