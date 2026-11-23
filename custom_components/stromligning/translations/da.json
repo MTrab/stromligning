@@ -17,11 +17,12 @@
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)",
-                    "daily_price_sensor": "Tilføj en sensor med priserne for i dag og i morgen",
+                    "daily_price_sensor": "Tilføj døgnpriser i Nord Pool-format",
                     "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?",
                     "api_key": "API-nøgle (valgfri)"
                 },
                 "data_description": {
+                    "daily_price_sensor": "Samler de eksisterende priser for i dag og i morgen inkl. moms i én sensor til kort og automatiseringer, der bruger Nord Pool-attributter.",
                     "api_key": "Valgfri. Opret en personlig API-nøgle på stromligning.dk/bruger/api-noegler. Med en nøgle tælles grænsen for antal kald per nøgle i stedet for per IP-adresse."
                 }
             },
@@ -58,11 +59,12 @@
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)",
-                    "daily_price_sensor": "Tilføj en sensor med priserne for i dag og i morgen",
+                    "daily_price_sensor": "Tilføj døgnpriser i Nord Pool-format",
                     "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?",
                     "api_key": "API-nøgle (valgfri)"
                 },
                 "data_description": {
+                    "daily_price_sensor": "Samler de eksisterende priser for i dag og i morgen inkl. moms i én sensor til kort og automatiseringer, der bruger Nord Pool-attributter.",
                     "api_key": "Valgfri. Opret en personlig API-nøgle på stromligning.dk/bruger/api-noegler. Med en nøgle tælles grænsen for antal kald per nøgle i stedet for per IP-adresse."
                 }
             },
@@ -86,7 +88,7 @@
     "entity": {
         "sensor": {
             "daily_prices": {
-                "name": "Døgnpriser inkl. moms"
+                "name": "Døgnpriser i Nord Pool-format"
             },
             "current_price_vat": {
                 "name": "Aktuel inkl. moms",

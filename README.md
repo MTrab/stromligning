@@ -17,7 +17,7 @@ Requires Home Assistant 2024.12.0 or newer.
 
 [**Setup**](#setup)
 
-[**Daily price sensor**](#daily-price-sensor)
+[**Daily prices in Nord Pool format**](#daily-prices-in-nord-pool-format)
 
 [**Use the custom template to show the next x cheapest hours**](#use-the-custom-template-to-show-the-next-x-cheapest-hours)
 
@@ -64,11 +64,12 @@ without a key. If the API rejects the saved key, Home Assistant asks for a new
 one; leaving that field empty also continues without a key. The key is stored in
 the config entry and is never logged.
 
-## Daily price sensor
+## Daily prices in Nord Pool format
 
-Select "Add a sensor with today's and tomorrow's prices" during setup or in the
-integration options to create the `daily_prices` sensor. The setting is off by
-default. The sensor state is the current total price including VAT in DKK/kWh.
+Select "Add daily prices in Nord Pool format" during setup or in the integration
+options. The setting is off by default. The `daily_prices` sensor combines the existing
+prices for today and tomorrow for cards and automations that use Nord Pool
+attributes. Its state is the current total price including VAT in DKK/kWh.
 
 - `today` and `tomorrow` list prices in chronological order at the configured
   resolution (hourly or 15 minutes).

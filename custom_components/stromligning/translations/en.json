@@ -17,11 +17,12 @@
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
                     "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
-                    "daily_price_sensor": "Add a sensor with today's and tomorrow's prices",
+                    "daily_price_sensor": "Add daily prices in Nord Pool format",
                     "production_prices": "Include sale prices for surplus production (e.g. solar)?",
                     "api_key": "API key (optional)"
                 },
                 "data_description": {
+                    "daily_price_sensor": "Combines the existing prices for today and tomorrow incl. VAT in one sensor for cards and automations that use Nord Pool attributes.",
                     "api_key": "Optional. Create a personal API key at stromligning.dk/bruger/api-noegler. Requests with a key are rate limited per key instead of per IP address."
                 }
             },
@@ -58,11 +59,12 @@
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
                     "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
-                    "daily_price_sensor": "Add a sensor with today's and tomorrow's prices",
+                    "daily_price_sensor": "Add daily prices in Nord Pool format",
                     "production_prices": "Include sale prices for surplus production (e.g. solar)?",
                     "api_key": "API key (optional)"
                 },
                 "data_description": {
+                    "daily_price_sensor": "Combines the existing prices for today and tomorrow incl. VAT in one sensor for cards and automations that use Nord Pool attributes.",
                     "api_key": "Optional. Create a personal API key at stromligning.dk/bruger/api-noegler. Requests with a key are rate limited per key instead of per IP address."
                 }
             },
@@ -86,7 +88,7 @@
     "entity": {
         "sensor": {
             "daily_prices": {
-                "name": "Daily prices incl. VAT"
+                "name": "Daily prices in Nord Pool format"
             },
             "current_price_vat": {
                 "name": "Current incl. VAT",
