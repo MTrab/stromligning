@@ -23,11 +23,20 @@ from .base import (
     StromligningSensorEntityDescription,
     build_price_attributes,
 )
-from .const import ATTR_PRICES, CONF_FORECASTS, CONF_PRODUCTION_PRICES, DOMAIN
+from .const import (
+    ATTR_PRICES,
+    ATTR_RAW_TODAY,
+    ATTR_RAW_TOMORROW,
+    CONF_FORECASTS,
+    CONF_PRODUCTION_PRICES,
+    DOMAIN,
+)
 
 LOGGER = logging.getLogger(__name__)
 
 AtValueGetter = Callable[[StromligningAPI], object]
+
+RAW_PRICE_SENSORS = ("current_price_vat", "current_price_ex_vat")
 
 SENSORS = [
     StromligningSensorEntityDescription(
@@ -493,7 +502,7 @@ async def async_setup_entry(hass, entry: StromligningConfigEntry, async_add_devi
 class StromligningSensor(StromligningEntity, SensorEntity):
     """Representation of a Stromligning Sensor."""
 
-    _unrecorded_attributes = frozenset({ATTR_PRICES})
+    _unrecorded_attributes = frozenset({ATTR_PRICES, ATTR_RAW_TODAY, ATTR_RAW_TOMORROW})
 
     _attr_has_entity_name = True
     _attr_available = True
@@ -632,6 +641,18 @@ class StromligningSensor(StromligningEntity, SensorEntity):
                 value_getter,
                 self.api.get_aggregation(),
             )
+            if key in RAW_PRICE_SENSORS:
+                tomorrow = (
+                    self.api.prices_tomorrow if self.api.tomorrow_available else []
+                )
+                self._attr_extra_state_attributes[ATTR_RAW_TODAY] = (
+                    self._attr_extra_state_attributes[ATTR_PRICES]
+                )
+                self._attr_extra_state_attributes[ATTR_RAW_TOMORROW] = (
+                    build_price_attributes(
+                        tomorrow, value_getter, self.api.get_aggregation()
+                    )[ATTR_PRICES]
+                )
         elif key in at_attribute_map:
             self._attr_extra_state_attributes = {"at": at_attribute_map[key](self.api)}
 

@@ -2,6 +2,8 @@
 
 ATTR_PRICES = "prices"
 ATTR_FORECAST_DATA = "forecast_data"
+ATTR_RAW_TODAY = "raw_today"
+ATTR_RAW_TOMORROW = "raw_tomorrow"
 
 CONF_AGGREGATION = "aggregation"
 CONF_API_KEY = "api_key"

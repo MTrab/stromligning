@@ -87,6 +87,19 @@ For an EMHASS price list, use the VAT-exclusive sensor's `price` values:
 Replace the entity ID with the one from your installation and select the periods
 required by your EMHASS configuration.
 
+## Today's and tomorrow's prices on one sensor
+
+`current_price_vat` and `current_price_ex_vat` also have the attributes
+`raw_today` and `raw_tomorrow`, the names the Nord Pool and Energi Data Service
+integrations use. Tools that read both days from one price sensor, such as
+[EV Smart Charging](https://github.com/jonasbkarlsson/ev_smart_charging), can use
+these sensors directly, without a template sensor.
+
+Both attributes list intervals with `price`, `start`, and `end` in the selected
+resolution, like `prices`. `raw_today` holds the same periods as `prices`.
+`raw_tomorrow` holds tomorrow's published prices and is empty until they are
+available; forecasts are never included.
+
 ## Sale prices for surplus production
 
 Enable "Include sale prices for surplus production" in the integration options

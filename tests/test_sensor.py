@@ -74,3 +74,81 @@ def test_production_sensor_rate_metadata(key):
     assert description.state_class is SensorStateClass.MEASUREMENT
     assert description.device_class is None
     assert description.unit_of_measurement == "kr/kWh"
+
+
+@pytest.mark.parametrize(
+    "sensor_key,today,tomorrow",
+    [
+        ("current_price_vat", [1.25, 2.5], [3.75, 5.0]),
+        ("current_price_ex_vat", [1.0, 2.0], [3.0, 4.0]),
+    ],
+)
+@pytest.mark.parametrize("aggregation", ["1h", "15m"])
+def test_current_price_raw_today_and_tomorrow(
+    sensor_key, today, tomorrow, aggregation, monkeypatch
+):
+    """Current price sensors carry today and published tomorrow on one entity."""
+    zone = ZoneInfo("Europe/Copenhagen")
+    monkeypatch.setattr(dt_utils, "DEFAULT_TIME_ZONE", zone)
+    start = datetime(2026, 11, 23, 22, 0, tzinfo=UTC)
+    interval = timedelta(minutes=15 if aggregation == "15m" else 60)
+    prices = [
+        {
+            "date": (start + index * interval).astimezone(zone),
+            "price": {"total": total * 1.25, "value": total},
+        }
+        for index, total in enumerate([1, 2, 3, 4])
+    ]
+    sensor = StromligningSensor.__new__(StromligningSensor)
+    sensor.entity_description = next(d for d in SENSORS if d.key == sensor_key)
+    sensor.api = SimpleNamespace(
+        prices_forecasts=[],
+        prices_today=prices[:2],
+        prices_tomorrow=prices[2:],
+        production_today=[],
+        tomorrow_available=True,
+        get_aggregation=lambda: aggregation,
+    )
+
+    def periods(values, offset):
+        return [
+            {
+                "price": value,
+                "start": (start + (offset + index) * interval).astimezone(zone),
+                "end": (start + (offset + index + 1) * interval).astimezone(zone),
+            }
+            for index, value in enumerate(values)
+        ]
+
+    sensor.handle_attributes()
+
+    assert sensor.extra_state_attributes == {
+        "prices": periods(today, 0),
+        "raw_today": periods(today, 0),
+        "raw_tomorrow": periods(tomorrow, 2),
+    }
+
+    # Forecast data for tomorrow is not published prices.
+    sensor.api.tomorrow_available = False
+    sensor.handle_attributes()
+    assert sensor.extra_state_attributes["raw_tomorrow"] == []
+    assert sensor.extra_state_attributes["raw_today"] == periods(today, 0)
+
+
+def test_raw_attributes_only_on_current_price_sensors():
+    """Other price sensors keep only their prices attribute."""
+    sensor = StromligningSensor.__new__(StromligningSensor)
+    sensor.entity_description = next(d for d in SENSORS if d.key == "spotprice_vat")
+    sensor.api = SimpleNamespace(
+        prices_forecasts=[],
+        prices_today=[],
+        prices_tomorrow=[],
+        production_today=[],
+        tomorrow_available=True,
+        get_aggregation=lambda: "1h",
+    )
+
+    sensor.handle_attributes()
+
+    assert sensor.extra_state_attributes == {"prices": []}
+    assert {"raw_today", "raw_tomorrow"} <= StromligningSensor._unrecorded_attributes
