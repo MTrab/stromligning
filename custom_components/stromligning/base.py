@@ -61,6 +61,21 @@ def build_price_attributes(
     value_getter: PriceValueGetter,
     aggregation: str,
 ) -> dict[str, list[dict[str, Any]]]:
+    """Build the integration's prices attribute."""
+    return {
+        "prices": build_price_periods(
+            prices, value_getter, aggregation, value_key="price"
+        )
+    }
+
+
+def build_price_periods(
+    prices: list[dict[str, Any]],
+    value_getter: PriceValueGetter,
+    aggregation: str,
+    *,
+    value_key: str,
+) -> list[dict[str, Any]]:
     """Build local price intervals using the configured duration."""
     interval = timedelta(minutes=15) if aggregation == "15m" else timedelta(hours=1)
     price_set: list[dict[str, Any]] = []
@@ -69,10 +84,10 @@ def build_price_attributes(
         end = dt_utils.as_local(dt_utils.as_utc(price["date"]) + interval)
         price_set.append(
             {
-                "price": value_getter(price),
+                value_key: value_getter(price),
                 "start": price["date"],
                 "end": end,
             }
         )
 
-    return {"prices": price_set}
+    return price_set

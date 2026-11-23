@@ -17,6 +17,8 @@ Requires Home Assistant 2024.12.0 or newer.
 
 [**Setup**](#setup)
 
+[**Daily price sensor**](#daily-price-sensor)
+
 [**Use the custom template to show the next x cheapest hours**](#use-the-custom-template-to-show-the-next-x-cheapest-hours)
 
 
@@ -61,6 +63,24 @@ limits per key instead of per IP address. Leave the field empty to use the API
 without a key. If the API rejects the saved key, Home Assistant asks for a new
 one; leaving that field empty also continues without a key. The key is stored in
 the config entry and is never logged.
+
+## Daily price sensor
+
+Select "Add a sensor with today's and tomorrow's prices" during setup or in the
+integration options to create the `daily_prices` sensor. The setting is off by
+default. The sensor state is the current total price including VAT in DKK/kWh.
+
+- `today` and `tomorrow` list prices in chronological order at the configured
+  resolution (hourly or 15 minutes).
+- `raw_today` and `raw_tomorrow` list the same prices as Nord Pool-style
+  intervals with `start`, `end`, and `value`.
+- `tomorrow_valid` is true once a complete day of published prices is available.
+- `forecast_data` is true when tomorrow's list includes forecast prices.
+  With forecasts enabled, the sensor can show these prices until the next
+  successful fetch of published prices. The lists for tomorrow are empty when
+  neither published prices nor an enabled forecast is available.
+- `today_forecast` is true if today's list still contains forecast prices,
+  for example after midnight if published prices have been delayed.
 
 ## Spot price forecasts
 

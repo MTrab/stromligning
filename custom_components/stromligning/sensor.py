@@ -22,12 +22,29 @@ from .base import (
     StromligningEntity,
     StromligningSensorEntityDescription,
     build_price_attributes,
+    build_price_periods,
 )
-from .const import ATTR_PRICES, CONF_FORECASTS, CONF_PRODUCTION_PRICES, DOMAIN
+from .const import (
+    ATTR_FORECAST_DATA,
+    ATTR_PRICES,
+    CONF_DAILY_PRICE_SENSOR,
+    CONF_FORECASTS,
+    CONF_PRODUCTION_PRICES,
+    DOMAIN,
+)
 
 LOGGER = logging.getLogger(__name__)
 
 AtValueGetter = Callable[[StromligningAPI], object]
+
+DAILY_PRICE_SENSOR = StromligningSensorEntityDescription(
+    key="daily_prices",
+    icon="mdi:calendar-clock",
+    value_fn=lambda api: api.get_current(),
+    suggested_display_precision=2,
+    translation_key="daily_prices",
+    unit_of_measurement="kr/kWh",  # type: ignore
+)
 
 SENSORS = [
     StromligningSensorEntityDescription(
@@ -487,6 +504,9 @@ async def async_setup_entry(hass, entry: StromligningConfigEntry, async_add_devi
         )
         sensors.append(entity)
 
+    if entry.options.get(CONF_DAILY_PRICE_SENSOR, False):
+        sensors.append(StromligningDailyPriceSensor(DAILY_PRICE_SENSOR, hass, entry))
+
     async_add_devices(sensors)
 
 
@@ -646,3 +666,42 @@ class StromligningSensor(StromligningEntity, SensorEntity):
         """Subscribe only while added and populate the initial state."""
         await super().async_added_to_hass()
         self.handle_update()
+
+
+class StromligningDailyPriceSensor(StromligningSensor):
+    """Expose today's and tomorrow's total prices in Nord Pool format."""
+
+    _unrecorded_attributes = frozenset(
+        {"today", "tomorrow", "raw_today", "raw_tomorrow"}
+    )
+
+    def handle_attributes(self) -> None:
+        """Expose tomorrow's forecast only when it is enabled and needed."""
+        tomorrow_valid = self.api.tomorrow_available
+        forecast_data = (
+            not tomorrow_valid
+            and self._config.options.get(CONF_FORECASTS, False)
+            and self.api.forecast_data
+        )
+        aggregation = self.api.get_aggregation()
+        total_price = lambda price: price["price"]["total"]
+        raw_today = build_price_periods(
+            self.api.prices_today, total_price, aggregation, value_key="value"
+        )
+        raw_tomorrow = build_price_periods(
+            self.api.prices_tomorrow if tomorrow_valid or forecast_data else [],
+            total_price,
+            aggregation,
+            value_key="value",
+        )
+        self._attr_extra_state_attributes = {
+            "today": [period["value"] for period in raw_today],
+            "tomorrow": [period["value"] for period in raw_tomorrow],
+            "raw_today": raw_today,
+            "raw_tomorrow": raw_tomorrow,
+            "tomorrow_valid": tomorrow_valid,
+            ATTR_FORECAST_DATA: forecast_data,
+            "today_forecast": any(
+                price.get("forecast", False) for price in self.api.prices_today
+            ),
+        }

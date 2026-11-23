@@ -17,6 +17,7 @@
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)",
+                    "daily_price_sensor": "Tilføj en sensor med priserne for i dag og i morgen",
                     "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?",
                     "api_key": "API-nøgle (valgfri)"
                 },
@@ -57,6 +58,7 @@
                     "company": "Elleverandør",
                     "aggregation": "Dataopløsning på priser",
                     "forecasts": "Inkluder prisudsigter for den næste uge? (kan være unøjagtige)",
+                    "daily_price_sensor": "Tilføj en sensor med priserne for i dag og i morgen",
                     "production_prices": "Inkluder salgspriser for overskudsproduktion (f.eks. solceller)?",
                     "api_key": "API-nøgle (valgfri)"
                 },
@@ -83,6 +85,9 @@
     },
     "entity": {
         "sensor": {
+            "daily_prices": {
+                "name": "Døgnpriser inkl. moms"
+            },
             "current_price_vat": {
                 "name": "Aktuel inkl. moms",
                 "state_attributes": {

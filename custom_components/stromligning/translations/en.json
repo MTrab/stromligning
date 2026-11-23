@@ -17,6 +17,7 @@
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
                     "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
+                    "daily_price_sensor": "Add a sensor with today's and tomorrow's prices",
                     "production_prices": "Include sale prices for surplus production (e.g. solar)?",
                     "api_key": "API key (optional)"
                 },
@@ -57,6 +58,7 @@
                     "company": "Electricity provider",
                     "aggregation": "Resolution of prices",
                     "forecasts": "Include price forecasts for the next week? (may be inaccurate)",
+                    "daily_price_sensor": "Add a sensor with today's and tomorrow's prices",
                     "production_prices": "Include sale prices for surplus production (e.g. solar)?",
                     "api_key": "API key (optional)"
                 },
@@ -83,6 +85,9 @@
     },
     "entity": {
         "sensor": {
+            "daily_prices": {
+                "name": "Daily prices incl. VAT"
+            },
             "current_price_vat": {
                 "name": "Current incl. VAT",
                 "state_attributes": {

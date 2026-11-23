@@ -1,6 +1,7 @@
 """Public lifecycle and registry compatibility tests using a real HA instance."""
 
 import asyncio
+from datetime import UTC
 from pathlib import Path
 from threading import Barrier
 from types import MappingProxyType
@@ -380,6 +381,7 @@ async def test_config_flow_product_ids_and_duplicates(integration_hass, library)
         "company": "product",
         "aggregation": "15m",
         "forecasts": True,
+        "daily_price_sensor": False,
         "production_prices": False,
     }
     result = await hass.config_entries.flow.async_configure(result["flow_id"], options)
@@ -651,6 +653,141 @@ async def test_public_tomorrow_and_forecast_attributes(
         dt_utils.parse_datetime(refresh.state)
         == entry.runtime_data.api.get_next_update()
     )
+
+
+@pytest.mark.asyncio
+async def test_daily_price_sensor_config_and_options(integration_hass, library):
+    """Save the opt-in during setup and use it to add or remove the entity."""
+    hass = integration_hass
+    form = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    options = form["data_schema"]({"company": "product"})
+    assert options["daily_price_sensor"] is False
+    result = await hass.config_entries.flow.async_configure(
+        form["flow_id"], {**options, "daily_price_sensor": True}
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    entry = result["result"]
+    registry = er.async_get(hass)
+    unique_id = f"daily_prices_{entry.entry_id}".lower()
+    entity_id = registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+    assert hass.states.get(entity_id) is not None
+    entry_unique_id = entry.unique_id
+
+    for enabled in (False, True):
+        options = await hass.config_entries.options.async_init(entry.entry_id)
+        assert options["data_schema"]({"company": "product"})["daily_price_sensor"] is (
+            not enabled
+        )
+        result = await hass.config_entries.options.async_configure(
+            options["flow_id"], {**entry.options, "daily_price_sensor": enabled}
+        )
+        assert result["type"] == "create_entry"
+        await hass.async_block_till_done()
+        assert entry.unique_id == entry_unique_id
+        state = hass.states.get(entity_id)
+        assert ("raw_today" in state.attributes) is enabled
+        if not enabled:
+            assert state.state == "unavailable"
+            assert state.attributes["restored"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("aggregation", "forecasts", "tomorrow_count"),
+    [("1h", False, 25), ("15m", True, 100)],
+)
+async def test_daily_prices_refresh_and_rollover(
+    integration_hass, library, monkeypatch, aggregation, forecasts, tomorrow_count
+):
+    """Switch sources after a completed refresh and rebucket across midnight."""
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    hass = integration_hass
+    now = datetime(2026, 10, 24, 12, tzinfo=ZoneInfo("Europe/Copenhagen"))
+    monkeypatch.setattr(dt_utils, "now", lambda: now)
+    monkeypatch.setattr(
+        "custom_components.stromligning.coordinator.async_track_point_in_utc_time",
+        Mock(return_value=Mock()),
+    )
+    published = False
+    original = Stromligning.update
+
+    def update(client, start):
+        original(client, start)
+        if published or client.forecast:
+            midnight = now.replace(hour=0) + timedelta(days=1)
+            records = day_records(midnight, aggregation, forecast=not published)
+            if published:
+                records[0]["price"]["total"] = 2.5
+            client.prices.extend(records)
+
+    monkeypatch.setattr(Stromligning, "update", update)
+    entry = await add_entry(
+        hass,
+        legacy_entry(
+            forecasts=forecasts, aggregation=aggregation, daily_price_sensor=True
+        ),
+    )
+    coordinator = entry.runtime_data
+    entity_id = "sensor.my_existing_prices_daily_prices"
+    state = hass.states.get(entity_id)
+    initial = state.attributes
+    assert float(state.state) == coordinator.api.get_current()
+    assert initial["today"][0] == -5
+    assert initial["raw_today"][0]["value"] == -5
+    assert initial["tomorrow_valid"] is False
+    assert initial["forecast_data"] is forecasts
+    assert (
+        len(initial["tomorrow"])
+        == len(initial["raw_tomorrow"])
+        == (tomorrow_count if forecasts else 0)
+    )
+
+    entered, release = asyncio.Event(), asyncio.Event()
+    original_fetch = coordinator.api.update_prices
+
+    async def delayed_fetch():
+        entered.set()
+        await release.wait()
+        await original_fetch()
+
+    monkeypatch.setattr(coordinator.api, "update_prices", delayed_fetch)
+    published = True
+    async with asyncio.timeout(10), asyncio.TaskGroup() as tasks:
+        tasks.create_task(coordinator._fetch(now))
+        await entered.wait()
+        local = tasks.create_task(coordinator._local_update(now))
+        await asyncio.sleep(0)
+        assert not local.done()
+        assert hass.states.get(entity_id).attributes == initial
+        release.set()
+
+    updated = hass.states.get(entity_id).attributes
+    assert updated["tomorrow_valid"] is True
+    assert updated["forecast_data"] is False
+    assert updated["tomorrow"][0] == 2.5
+    raw = updated["raw_tomorrow"]
+    assert updated["tomorrow"] == [period["value"] for period in raw]
+    assert len(raw) == tomorrow_count
+    interval = timedelta(days=1, hours=1) / tomorrow_count
+    for previous, current in zip(raw, raw[1:]):
+        assert set(previous) == {"start", "end", "value"}
+        assert previous["end"].astimezone(UTC) == current["start"].astimezone(UTC)
+        assert (
+            previous["end"].astimezone(UTC) - previous["start"].astimezone(UTC)
+            == interval
+        )
+
+    now = now.replace(hour=0) + timedelta(days=1)
+    await coordinator._local_update(now)
+    rolled = hass.states.get(entity_id).attributes
+    assert rolled["raw_today"] == raw
+    assert rolled["today_forecast"] is False
+    assert rolled["raw_tomorrow"] == []
+    assert rolled["tomorrow_valid"] is rolled["forecast_data"] is False
+    assert library.update.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -1412,6 +1549,7 @@ async def test_config_flow_api_key(integration_hass, keyed_library):
     assert result["type"] == "create_entry"
     assert result["result"].options == {
         **options,
+        "daily_price_sensor": False,
         "production_prices": False,
         "api_key": "good",
     }
